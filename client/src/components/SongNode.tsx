@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { Text, Sphere } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
@@ -19,9 +19,34 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const textRef = useRef<THREE.Mesh>(null);
   const outerRingRef = useRef<THREE.Mesh>(null);
+  const frequencyBarRefs = useRef<THREE.Mesh[]>([]);
   const [hovered, setHovered] = useState(false);
   const { playerPosition, discoverSongNode, currentSong, setCurrentSong, audioAnalyzer } = useMusicExplorer();
   const { playSuccess } = useAudio();
+
+  // Frequency bars around this song node
+  const frequencyBars = useMemo(() => {
+    const bars = [];
+    const barCount = 12;
+    frequencyBarRefs.current = [];
+    
+    for (let i = 0; i < barCount; i++) {
+      const angle = (i / barCount) * Math.PI * 2;
+      const radius = 4; // Close to the song node
+      
+      bars.push({
+        position: [
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius
+        ] as [number, number, number],
+        rotation: [0, angle, 0] as [number, number, number],
+        index: i
+      });
+    }
+    
+    return bars;
+  }, []);
 
   // Calculate distance to player
   const distanceToPlayer = new THREE.Vector3(...position).distanceTo(
@@ -54,12 +79,30 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         // Additional pulsing for the ring
         const ringScale = 1 + normalizedAudio * 0.2;
         outerRingRef.current.scale.setScalar(ringScale);
+        
+        // ANIMATE FREQUENCY BARS with the same audio data
+        for (let i = 0; i < frequencyBarRefs.current.length; i++) {
+          const barMesh = frequencyBarRefs.current[i];
+          if (!barMesh) continue;
+          
+          const audioValue = frequencyData[i % frequencyData.length] || 0;
+          const barNormalizedAudio = audioValue / 255;
+          
+          // Scale bars based on frequency data
+          const scaleY = 0.3 + barNormalizedAudio * 3;
+          barMesh.scale.y = scaleY;
+        }
       }
     } else {
       // Reset to normal size when not playing
       meshRef.current.scale.setScalar(1);
       if (outerRingRef.current) {
         outerRingRef.current.scale.setScalar(1);
+      }
+      // Reset frequency bars
+      for (let i = 0; i < frequencyBarRefs.current.length; i++) {
+        const barMesh = frequencyBarRefs.current[i];
+        if (barMesh) barMesh.scale.y = 0.3;
       }
     }
   });
@@ -171,6 +214,27 @@ export default function SongNode({ position, songData }: SongNodeProps) {
           {isDiscovered ? "Press E to play" : "Press E to discover"}
         </Text>
       )}
+
+      {/* Frequency bars around song node - only when playing */}
+      {isCurrentlyPlaying && frequencyBars.map((bar, index) => {
+        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
+        const color = colors[index % colors.length];
+        return (
+          <mesh
+            key={`freq-bar-${index}`}
+            ref={(el) => { if (el) frequencyBarRefs.current[index] = el; }}
+            position={bar.position}
+            rotation={bar.rotation}
+          >
+            <boxGeometry args={[0.2, 2, 0.2]} />
+            <meshBasicMaterial 
+              color={color} 
+              transparent 
+              opacity={0.8}
+            />
+          </mesh>
+        );
+      })}
 
       {/* Discovery effect - static */}
       {!isDiscovered && isNearby && (
