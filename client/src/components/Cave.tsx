@@ -48,10 +48,10 @@ export default function Cave() {
       
       // Create stable cave-like point distribution
       for (let i = 0; i < particleCount; i++) {
-        // Generate cave-like structure with multiple chambers
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 15 + Math.random() * (20 + layerIndex * 10);
-        const height = Math.random() * 15;
+        // Generate stable cave-like structure 
+        const angle = (i / particleCount) * Math.PI * 4;
+        const radius = 15 + (layerIndex * 10);
+        const height = (i % 15);
         
         // Create stable organic cave shapes
         const noise = Math.sin(angle * 3) * Math.cos(height * 0.1) * 1;
@@ -62,9 +62,9 @@ export default function Cave() {
         const z = Math.sin(angle) * caveRadius;
         
         // Add stable cave features
-        if (Math.random() < 0.2) {
-          const stalactiteHeight = Math.random() < 0.5 ? 12 : -2;
-          layerPoints.push(x, stalactiteHeight, z); // Removed random variation
+        if (i % 5 === 0) {
+          const stalactiteHeight = i % 2 === 0 ? 12 : -2;
+          layerPoints.push(x, stalactiteHeight, z);
         } else {
           layerPoints.push(x, y, z);
         }
@@ -83,12 +83,12 @@ export default function Cave() {
     const colors = new Float32Array(particleCount * 3);
     
     for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 150;
-      positions[i * 3 + 1] = Math.random() * 20;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 150;
+      positions[i * 3] = ((i % 100) - 50) * 3;
+      positions[i * 3 + 1] = (i % 20);
+      positions[i * 3 + 2] = ((i % 100) - 50) * 3;
       
       // Fluorescent colors
-      const colorChoice = Math.floor(Math.random() * 4);
+      const colorChoice = i % 4;
       switch (colorChoice) {
         case 0: // Cyan
           colors[i * 3] = 0;
@@ -179,17 +179,17 @@ export default function Cave() {
 
       {/* Realistic Stalactites - hanging from ceiling */}
       {[...Array(15)].map((_, i) => {
-        const angle = (i / 30) * Math.PI * 2 + Math.random() * 0.5;
-        const radius = 15 + Math.random() * 30;
+        const angle = (i / 15) * Math.PI * 2;
+        const radius = 25;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const height = 2 + Math.random() * 8;
+        const height = 4;
         
         return (
           <group key={`stalactite-${i}`} position={[x, 15, z]}>
             {/* Main stalactite body */}
             <mesh>
-              <coneGeometry args={[0.3 + Math.random() * 0.4, height, 8]} />
+              <coneGeometry args={[0.5, height, 8]} />
               <meshBasicMaterial
                 color="#e6d7c3"
                 transparent
@@ -200,7 +200,7 @@ export default function Cave() {
             <mesh position={[0, -height/2, 0]}>
               <sphereGeometry args={[0.15, 8, 8]} />
               <meshBasicMaterial
-                color={`hsl(${180 + Math.random() * 60}, 70%, 70%)`}
+                color="hsl(200, 70%, 70%)"
                 transparent
                 opacity={0.8}
               />
@@ -211,17 +211,17 @@ export default function Cave() {
       
       {/* Realistic Stalagmites - rising from floor */}
       {[...Array(12)].map((_, i) => {
-        const angle = (i / 25) * Math.PI * 2 + Math.random() * 0.3;
-        const radius = 12 + Math.random() * 35;
+        const angle = (i / 12) * Math.PI * 2;
+        const radius = 30;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const height = 1 + Math.random() * 6;
+        const height = 3;
         
         return (
           <group key={`stalagmite-${i}`} position={[x, -2, z]}>
             {/* Main stalagmite body */}
             <mesh>
-              <coneGeometry args={[0.4 + Math.random() * 0.5, height, 8]} />
+              <coneGeometry args={[0.6, height, 8]} />
               <meshBasicMaterial
                 color="#d4c4a0"
                 transparent
@@ -232,7 +232,7 @@ export default function Cave() {
             <mesh position={[0, height/2, 0]} scale={[1.1, 0.1, 1.1]}>
               <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
               <meshBasicMaterial
-                color={`hsl(${Math.random() * 360}, 80%, 60%)`}
+                color="hsl(60, 80%, 60%)"
                 transparent
                 opacity={0.7}
               />
@@ -244,18 +244,18 @@ export default function Cave() {
       {/* Flowstone formations - bacon-like layered structures */}
       {[...Array(8)].map((_, i) => {
         const angle = (i / 8) * Math.PI * 2;
-        const radius = 20 + Math.random() * 15;
+        const radius = 25;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`flowstone-${i}`} position={[x, 5 + Math.random() * 5, z]}>
+          <group key={`flowstone-${i}`} position={[x, 7, z]}>
             {/* Multiple layers of flowstone */}
             {[...Array(5)].map((_, layer) => (
               <mesh
                 key={layer}
                 position={[0, -layer * 0.3, 0]}
-                rotation={[0, Math.random() * 0.3, 0]}
+                rotation={[0, 0, 0]}
                 scale={[2 + layer * 0.2, 0.1, 1.5 + layer * 0.1]}
               >
                 <cylinderGeometry args={[1, 1.2, 0.2, 16]} />
@@ -272,13 +272,13 @@ export default function Cave() {
       
       {/* Aragonite crystal formations - branching structures */}
       {[...Array(6)].map((_, i) => {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 25 + Math.random() * 20;
+        const angle = (i / 6) * Math.PI * 2;
+        const radius = 35;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`aragonite-${i}`} position={[x, -1 + Math.random() * 8, z]}>
+          <group key={`aragonite-${i}`} position={[x, 4, z]}>
             {/* Main crystal trunk */}
             <mesh>
               <cylinderGeometry args={[0.1, 0.2, 2, 6]} />
@@ -297,12 +297,12 @@ export default function Cave() {
               return (
                 <mesh
                   key={branch}
-                  position={[branchX, 0.5 + Math.random() * 1, branchZ]}
-                  rotation={[Math.random() * 0.5, branchAngle, 0.3]}
+                  position={[branchX, 1, branchZ]}
+                  rotation={[0.2, branchAngle, 0.3]}
                 >
-                  <cylinderGeometry args={[0.05, 0.1, 1 + Math.random() * 0.5, 6]} />
+                  <cylinderGeometry args={[0.05, 0.1, 1.2, 6]} />
                   <meshBasicMaterial
-                    color={`hsl(${180 + Math.random() * 40}, 50%, 80%)`}
+                    color="hsl(200, 50%, 80%)"
                     transparent
                     opacity={0.8}
                   />
@@ -323,12 +323,12 @@ export default function Cave() {
       {/* Conulite formations - circular spiral patterns */}
       {[...Array(6)].map((_, i) => {
         const angle = (i / 6) * Math.PI * 2;
-        const radius = 30 + Math.random() * 10;
+        const radius = 35;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`conulite-${i}`} position={[x, 3 + Math.random() * 4, z]}>
+          <group key={`conulite-${i}`} position={[x, 5, z]}>
             {/* Spiral rings */}
             {[...Array(6)].map((_, ring) => {
               const ringRadius = 0.3 + ring * 0.15;
