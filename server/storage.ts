@@ -6,7 +6,8 @@ import type { SongNode, CaveObjectNode } from "@shared/schema";
 
 // Database connection
 const connectionString = process.env.DATABASE_URL!;
-const db = drizzle(neon(connectionString));
+const sql = neon(connectionString);
+const db = drizzle(sql);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -142,10 +143,12 @@ export class MemStorage implements IStorage {
   async getAllCaveObjects(): Promise<CaveObjectNode[]> {
     try {
       const result = await db.select().from(caveObjects);
+      console.log('Database cave objects result:', result);
       return result.map(transformCaveObjectToNode);
     } catch (error) {
       console.error('Error fetching cave objects from database:', error);
       // Fallback to in-memory storage
+      console.log('Using in-memory cave objects:', this.caveObjectsMap.size);
       return Array.from(this.caveObjectsMap.values()).map(transformCaveObjectToNode);
     }
   }
@@ -161,23 +164,31 @@ export class MemStorage implements IStorage {
   }
 
   async createCaveObject(obj: Omit<InsertCaveObject, 'createdAt'> & { createdAt?: string }): Promise<CaveObject> {
-    const objectData = {
+    const objectData: CaveObject = {
       ...obj,
-      createdAt: obj.createdAt ? new Date(obj.createdAt) : new Date()
+      createdAt: obj.createdAt ? new Date(obj.createdAt) : new Date(),
+      scaleX: obj.scaleX ?? 1.0,
+      scaleY: obj.scaleY ?? 1.0,
+      scaleZ: obj.scaleZ ?? 1.0,
+      color: obj.color ?? '#ffffff',
+      opacity: obj.opacity ?? 0.8,
+      rotationX: obj.rotationX ?? 0,
+      rotationY: obj.rotationY ?? 0,
+      rotationZ: obj.rotationZ ?? 0,
+      isVisible: obj.isVisible ?? true
     };
+    
+    // Always save to in-memory first for immediate availability
+    this.caveObjectsMap.set(obj.id, objectData);
+    console.log('Created cave object in memory:', obj.id, 'Total objects:', this.caveObjectsMap.size);
     
     try {
       const result = await db.insert(caveObjects).values(objectData).returning();
       return result[0];
     } catch (error) {
       console.error('Error inserting cave object into database:', error);
-      // Fallback to in-memory storage
-      const memObject: CaveObject = {
-        ...objectData,
-        createdAt: objectData.createdAt
-      };
-      this.caveObjectsMap.set(obj.id, memObject);
-      return memObject;
+      // Object is already in memory, so return it
+      return objectData;
     }
   }
 

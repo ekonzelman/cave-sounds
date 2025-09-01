@@ -1,16 +1,46 @@
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
 import SongNode from './SongNode';
 import * as THREE from 'three';
+import type { CaveObjectNode } from '../../../shared/schema';
 
 export default function Cave() {
   const caveRef = useRef<THREE.Group>(null);
   const pointsRefs = useRef<THREE.Points[]>([]);
   const stalactiteRefs = useRef<THREE.Mesh[]>([]);
+  const customObjectRefs = useRef<THREE.Mesh[]>([]);
   const { songNodes, currentSong, audioAnalyzer } = useMusicExplorer();
   const { camera } = useThree();
   const [revealedLayers, setRevealedLayers] = useState<number>(1);
+  const [caveObjects, setCaveObjects] = useState<CaveObjectNode[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch custom cave objects from database
+  useEffect(() => {
+    const fetchCaveObjects = async () => {
+      try {
+        const response = await fetch('/api/cave-objects');
+        if (response.ok) {
+          const objects = await response.json();
+          console.log('Fetched cave objects:', objects.length, objects);
+          setCaveObjects(objects);
+        } else {
+          console.error('Failed to fetch cave objects:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching cave objects:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCaveObjects();
+    
+    // Poll for changes every 5 seconds
+    const interval = setInterval(fetchCaveObjects, 5000);
+    return () => clearInterval(interval);
+  }, []);
   
   // Handle clicks to reveal new layers
   const handleClick = () => {
@@ -210,6 +240,49 @@ export default function Cave() {
           position={node.position}
           songData={node}
         />
+      ))}
+
+      {/* Custom cave objects from admin panel */}
+      {console.log('Rendering cave objects:', caveObjects.length, 'isLoading:', isLoading)}
+      {!isLoading && caveObjects.length > 0 && caveObjects.map((obj) => (
+        <group key={obj.id} position={obj.position} scale={obj.scale} rotation={obj.rotation}>
+          <mesh>
+            {/* Render different geometries based on object type */}
+            {obj.objectType === 'stalactite' && (
+              <coneGeometry args={[0.5, 3, 8]} />
+            )}
+            {obj.objectType === 'stalagmite' && (
+              <coneGeometry args={[0.8, 2, 8]} />
+            )}
+            {obj.objectType === 'crystal' && (
+              <octahedronGeometry args={[0.7]} />
+            )}
+            {obj.objectType === 'flowstone' && (
+              <boxGeometry args={[1.5, 0.3, 1]} />
+            )}
+            {obj.objectType === 'particle_system' && (
+              <sphereGeometry args={[0.1, 8, 8]} />
+            )}
+            
+            <meshStandardMaterial
+              color={obj.color}
+              transparent
+              opacity={obj.opacity}
+              roughness={0.8}
+              metalness={0.2}
+            />
+          </mesh>
+          
+          {/* Add glow effect for crystals */}
+          {obj.objectType === 'crystal' && (
+            <pointLight
+              position={[0, 0, 0]}
+              color={obj.color}
+              intensity={currentSong ? 2 : 0.5}
+              distance={10}
+            />
+          )}
+        </group>
       ))}
 
       {/* Realistic Stalactites - hanging from ceiling */}
