@@ -61,12 +61,12 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     
     for (let i = 0; i < barCount; i++) {
       const angle = (i / barCount) * Math.PI * 2;
-      const radius = 6;
+      const radius = 8; // Start farther out
       
       bars.push({
         position: [
           Math.cos(angle) * radius,
-          1, // Slightly elevated
+          6, // Start elevated
           Math.sin(angle) * radius
         ] as [number, number, number],
         rotation: [0, angle, 0] as [number, number, number],
@@ -109,14 +109,17 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       const targetZ = songNodePosition.z + Math.sin(baseAngle) * radius;
       const targetY = songNodePosition.y + 6; // Elevated above the song node
       
-      // Smooth movement to target position
-      barMesh.position.x += (targetX - barMesh.position.x) * 0.05;
-      barMesh.position.z += (targetZ - barMesh.position.z) * 0.05;
-      barMesh.position.y += (targetY - barMesh.position.y) * 0.05;
+      // DIRECT position update for immediate rotation (no smooth interpolation)
+      barMesh.position.x = targetX;
+      barMesh.position.z = targetZ;
+      barMesh.position.y = targetY;
       
-      // Audio-reactive scaling
-      const scaleY = 0.5 + normalizedAudio * 3;
+      // Audio-reactive scaling with more visible range
+      const scaleY = 0.3 + normalizedAudio * 4;
       barMesh.scale.y = scaleY;
+      
+      // Add some rotation for extra movement
+      barMesh.rotation.y = baseAngle + currentTime;
     }
   });
 
