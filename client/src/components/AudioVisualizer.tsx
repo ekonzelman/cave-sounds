@@ -77,7 +77,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     return bars;
   }, []);
 
-  // Global frequency bars positioned above the currently playing song node
+  // ORBITAL FREQUENCY BARS ANIMATION - ALWAYS VISIBLE AND MOVING
   useFrame((state) => {
     if (!audioAnalyzer || !currentSong || isMuted) return;
 
@@ -86,15 +86,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
 
     const currentTime = state.clock.elapsedTime;
     
-    // Find the position of the currently playing song node
-    const currentSongData = songNodes && songNodes.find ? songNodes.find((s: any) => s.id === currentSong.id) : null;
-    const songNodePosition = currentSongData ? {
-      x: currentSongData.position[0] || 0,
-      y: currentSongData.position[1] || 0, 
-      z: currentSongData.position[2] || 0
-    } : { x: 0, y: 0, z: 0 };
-    
-    // Update frequency bars positioned above the song node
+    // Animate ALL frequency bars in a clear orbit
     for (let i = 0; i < barRefs.current.length; i++) {
       const barMesh = barRefs.current[i];
       if (!barMesh) continue;
@@ -102,24 +94,19 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
       
-      // Position bars in a circle above the currently playing song node
-      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 0.5;
-      const radius = 8; // Wider circle for visibility
-      const targetX = songNodePosition.x + Math.cos(baseAngle) * radius;
-      const targetZ = songNodePosition.z + Math.sin(baseAngle) * radius;
-      const targetY = songNodePosition.y + 6; // Elevated above the song node
+      // CLEAR ORBITAL MOTION around center of scene
+      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 1.2; // Fast rotation
+      const radius = 15; // Large radius for visibility
       
-      // DIRECT position update for immediate rotation (no smooth interpolation)
-      barMesh.position.x = targetX;
-      barMesh.position.z = targetZ;
-      barMesh.position.y = targetY;
+      barMesh.position.x = Math.cos(baseAngle) * radius;
+      barMesh.position.z = Math.sin(baseAngle) * radius;
+      barMesh.position.y = 10; // High in the air
       
-      // Audio-reactive scaling with more visible range
-      const scaleY = 0.3 + normalizedAudio * 4;
-      barMesh.scale.y = scaleY;
+      // Audio scaling
+      barMesh.scale.y = 1 + normalizedAudio * 4;
       
-      // Add some rotation for extra movement
-      barMesh.rotation.y = baseAngle + currentTime;
+      // Bar rotation
+      barMesh.rotation.y = currentTime * 3;
     }
   });
 
@@ -158,7 +145,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
         />
       </points>
 
-      {/* Frequency bars - simplified and working */}
+      {/* Frequency bars - ANIMATED AND ORBITING */}
       {frequencyBars.map((bar, index) => {
         const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
         const color = colors[index % colors.length];
@@ -166,10 +153,9 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
           <mesh
             key={`bar-${index}`}
             ref={(el) => { if (el) barRefs.current[index] = el; }}
-            position={bar.position}
-            rotation={bar.rotation}
+            position={[0, 0, 0]} // Start at origin, animation will move them
           >
-            <boxGeometry args={[0.3, 2, 0.3]} />
+            <boxGeometry args={[0.4, 4, 0.4]} />
             <meshBasicMaterial 
               color={color} 
               transparent 
