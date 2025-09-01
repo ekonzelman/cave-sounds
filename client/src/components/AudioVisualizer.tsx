@@ -91,7 +91,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     // Debug audio data flow
     const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
     if (avgFrequency > 10) {
-      console.log('Audio data flowing - avg frequency:', avgFrequency);
+      console.log('Audio data flowing - avg frequency:', avgFrequency, 'bars:', frequencyBars.length);
     }
 
     // Update particle positions based on audio
@@ -113,8 +113,12 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     }
     
     // Update frequency bars with direct mesh scale manipulation
+    let anyBarAnimated = false;
     frequencyBars.forEach((bar, i) => {
-      if (!bar.ref.current) return;
+      if (!bar.ref.current) {
+        console.log(`Bar ${i} ref not found`);
+        return;
+      }
       
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
@@ -141,9 +145,16 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       }
       
       // Apply the scale directly to the mesh
-      bar.ref.current.scale.set(1, Math.max(0.1, scaleY), 1);
-      bar.currentHeight = scaleY;
+      const finalScale = Math.max(0.2, scaleY);
+      bar.ref.current.scale.set(1, finalScale, 1);
+      bar.currentHeight = finalScale;
+      
+      if (finalScale > 1.5) anyBarAnimated = true;
     });
+    
+    if (anyBarAnimated && avgFrequency > 15) {
+      console.log('Frequency bars should be animating!');
+    }
   });
 
   if (!currentSong) return null;
@@ -176,7 +187,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
         />
       </points>
 
-      {/* Dynamic frequency bars */}
+      {/* Dynamic frequency bars - always visible */}
       {frequencyBars.map((bar, index) => {
         const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
         const color = colors[index % colors.length];
