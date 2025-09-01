@@ -52,11 +52,16 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          const sensitivity = 0.002;
+          const sensitivity = 0.0015; // Slightly reduced sensitivity for smoother control
           euler.current.setFromQuaternion(camera.quaternion);
           euler.current.y -= event.movementX * sensitivity;
           euler.current.x -= event.movementY * sensitivity;
-          euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+          
+          // More restrictive vertical limits to prevent disorienting flipping
+          // Limit to about ±70 degrees instead of ±90 degrees for comfort
+          const maxPitch = Math.PI * 0.39; // ~70 degrees
+          euler.current.x = Math.max(-maxPitch, Math.min(maxPitch, euler.current.x));
+          
           camera.quaternion.setFromEuler(euler.current);
         } catch (error) {
           console.warn('Mouse look error:', error);
