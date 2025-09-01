@@ -6,7 +6,9 @@ import * as THREE from 'three';
 
 export default function Cave() {
   const caveRef = useRef<THREE.Group>(null);
-  const { songNodes } = useMusicExplorer();
+  const pointsRefs = useRef<THREE.Points[]>([]);
+  const stalactiteRefs = useRef<THREE.Mesh[]>([]);
+  const { songNodes, currentSong, audioAnalyzer } = useMusicExplorer();
   const { camera } = useThree();
   const [revealedLayers, setRevealedLayers] = useState<number>(1);
   
@@ -15,28 +17,61 @@ export default function Cave() {
     setRevealedLayers(prev => Math.min(prev + 1, 5));
   };
   
-  // Cave atmosphere lighting
+  // AUDIO-REACTIVE Cave atmosphere lighting
+  const [audioReactiveColors, setAudioReactiveColors] = useState({
+    ambient: '#2c1810',
+    directional: '#4a3728',
+    mineral: '#1a5490'
+  });
+  
+  // Update lighting colors based on audio
+  useFrame(() => {
+    if (currentSong && audioAnalyzer) {
+      const frequencyData = audioAnalyzer.getFrequencyData();
+      if (frequencyData) {
+        const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
+        const normalizedAudio = avgFrequency / 255;
+        const time = Date.now() * 0.001;
+        
+        // Dynamic color cycling based on audio
+        const hue = (time * 30 + normalizedAudio * 60) % 360;
+        setAudioReactiveColors({
+          ambient: `hsl(${hue}, 70%, 20%)`,
+          directional: `hsl(${(hue + 120) % 360}, 80%, 40%)`,
+          mineral: `hsl(${(hue + 240) % 360}, 90%, 60%)`
+        });
+      }
+    } else {
+      // Reset to default colors when no music is playing
+      setAudioReactiveColors({
+        ambient: '#2c1810',
+        directional: '#4a3728',
+        mineral: '#1a5490'
+      });
+    }
+  });
+  
   const caveAmbientLight = useMemo(() => {
     return (
       <>
-        {/* Warm ambient cave lighting */}
-        <ambientLight intensity={0.1} color="#2c1810" />
-        {/* Directional light from cave entrance */}
+        {/* Audio-reactive ambient cave lighting */}
+        <ambientLight intensity={currentSong ? 0.3 : 0.1} color={audioReactiveColors.ambient} />
+        {/* Audio-reactive directional light from cave entrance */}
         <directionalLight
           position={[10, 20, 10]}
-          intensity={0.3}
-          color="#4a3728"
+          intensity={currentSong ? 0.8 : 0.3}
+          color={audioReactiveColors.directional}
         />
-        {/* Underground mineral glow */}
+        {/* Audio-reactive underground mineral glow */}
         <pointLight
           position={[0, -5, 0]}
-          intensity={0.5}
-          distance={50}
-          color="#1a5490"
+          intensity={currentSong ? 2 : 0.5}
+          distance={currentSong ? 100 : 50}
+          color={audioReactiveColors.mineral}
         />
       </>
     );
-  }, []);
+  }, [audioReactiveColors, currentSong]);
 
   // Generate point cloud cave layers
   const caveLayers = useMemo(() => {
@@ -134,10 +169,10 @@ export default function Cave() {
             />
           </bufferGeometry>
           <pointsMaterial
-            color="#ffffff"
-            size={0.02 + layerIndex * 0.01}
+            color={currentSong ? audioReactiveColors.mineral : "#ffffff"}
+            size={currentSong ? 0.05 + layerIndex * 0.02 : 0.02 + layerIndex * 0.01}
             transparent
-            opacity={0.8 - layerIndex * 0.1}
+            opacity={currentSong ? 0.9 : 0.8 - layerIndex * 0.1}
             vertexColors={false}
           />
         </points>
@@ -191,9 +226,9 @@ export default function Cave() {
             <mesh>
               <coneGeometry args={[0.5, height, 8]} />
               <meshBasicMaterial
-                color="#e6d7c3"
+                color={currentSong ? `hsl(${((Date.now() * 0.05 + i * 30) % 360)}, 60%, 70%)` : "#e6d7c3"}
                 transparent
-                opacity={0.9}
+                opacity={currentSong ? 1.0 : 0.9}
               />
             </mesh>
             {/* Mineral deposits */}
@@ -223,9 +258,9 @@ export default function Cave() {
             <mesh>
               <coneGeometry args={[0.6, height, 8]} />
               <meshBasicMaterial
-                color="#d4c4a0"
+                color={currentSong ? `hsl(${((Date.now() * 0.03 + i * 45) % 360)}, 70%, 60%)` : "#d4c4a0"}
                 transparent
-                opacity={0.9}
+                opacity={currentSong ? 1.0 : 0.9}
               />
             </mesh>
             {/* Colorful mineral veins */}

@@ -24,15 +24,15 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const { playerPosition, discoverSongNode, currentSong, togglePlayPause, audioAnalyzer, isPaused, visualizationFilter } = useMusicExplorer();
   const { playSuccess } = useAudio();
 
-  // Frequency bars around this song node
+  // DRAMATIC frequency bars around this song node - much larger scale
   const frequencyBars = useMemo(() => {
     const bars = [];
-    const barCount = 12;
+    const barCount = 24; // More bars for better visualization
     frequencyBarRefs.current = [];
     
     for (let i = 0; i < barCount; i++) {
       const angle = (i / barCount) * Math.PI * 2;
-      const radius = 4; // Close to the song node
+      const radius = 8; // Much larger radius to take up more space
       
       bars.push({
         position: [
@@ -93,32 +93,32 @@ export default function SongNode({ position, songData }: SongNodeProps) {
           // Different animations based on visualization mode
           switch (visualizationFilter) {
             case 'wave':
-              // Wave motion - bars move in a sine wave pattern
+              // DRAMATIC Wave motion - massive bars in wave pattern
               try {
-                const waveOffset = Math.sin((i / 12) * Math.PI * 2 + currentTime * 2) * 0.5;
-                const waveScale = Math.max(0.1, Math.min(5, 0.3 + barNormalizedAudio * 2 + Math.abs(waveOffset)));
+                const waveOffset = Math.sin((i / 24) * Math.PI * 2 + currentTime * 2) * 3; // Much larger wave motion
+                const waveScale = Math.max(1, Math.min(15, 2 + barNormalizedAudio * 8 + Math.abs(waveOffset)));
                 
                 if (isFinite(waveOffset) && isFinite(waveScale)) {
                   barMesh.scale.y = waveScale;
                   barMesh.position.y = waveOffset;
-                  // Reset other positions to original circle
-                  const baseAngle = (i / 12) * Math.PI * 2;
-                  barMesh.position.x = Math.cos(baseAngle) * 4;
-                  barMesh.position.z = Math.sin(baseAngle) * 4;
+                  // Reset other positions to larger circle
+                  const baseAngle = (i / 24) * Math.PI * 2;
+                  barMesh.position.x = Math.cos(baseAngle) * 8;
+                  barMesh.position.z = Math.sin(baseAngle) * 8;
                   barMesh.rotation.y = 0;
                 }
               } catch (error) {
                 console.warn('Wave animation error:', error);
-                barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
+                barMesh.scale.y = 2 + barNormalizedAudio * 8;
                 barMesh.position.y = 0;
               }
               break;
               
             case 'spiral':
-              // Spiral dance - bars rotate and pulse in a spiral
+              // DRAMATIC Spiral dance - massive rotating spiral
               try {
-                const spiralAngle = (i / 12) * Math.PI * 2 + currentTime * 0.5;
-                const spiralRadius = Math.max(3, 4 + Math.sin(currentTime * 0.8 + i * 0.3) * 1);
+                const spiralAngle = (i / 24) * Math.PI * 2 + currentTime * 0.8;
+                const spiralRadius = Math.max(6, 12 + Math.sin(currentTime * 1.2 + i * 0.2) * 6); // Much larger spiral
                 const safeX = Math.cos(spiralAngle) * spiralRadius;
                 const safeZ = Math.sin(spiralAngle) * spiralRadius;
                 
@@ -126,50 +126,50 @@ export default function SongNode({ position, songData }: SongNodeProps) {
                 if (isFinite(safeX) && isFinite(safeZ) && isFinite(spiralAngle)) {
                   barMesh.position.x = safeX;
                   barMesh.position.z = safeZ;
-                  barMesh.position.y = Math.sin(currentTime + i * 0.1) * 0.5;
-                  barMesh.scale.y = Math.max(0.2, 0.3 + barNormalizedAudio * 3);
-                  barMesh.rotation.y = spiralAngle * 0.5;
+                  barMesh.position.y = Math.sin(currentTime + i * 0.2) * 4; // Bigger vertical movement
+                  barMesh.scale.y = Math.max(1.5, 3 + barNormalizedAudio * 12); // Much taller bars
+                  barMesh.rotation.y = spiralAngle * 0.7;
                 }
               } catch (error) {
                 console.warn('Spiral animation error:', error);
                 // Fallback to default position
-                barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
+                barMesh.scale.y = 3 + barNormalizedAudio * 12;
               }
               break;
               
             case 'burst':
-              // Energy burst - bars explode outward with high frequencies
+              // DRAMATIC Energy burst - massive explosion effect
               try {
-                const burstIntensity = Math.max(0.1, barNormalizedAudio > 0.6 ? barNormalizedAudio * 2 : 0.3);
-                const burstRadius = Math.max(2, Math.min(8, 4 + burstIntensity * 2));
-                const burstAngle = (i / 12) * Math.PI * 2;
+                const burstIntensity = Math.max(0.5, barNormalizedAudio > 0.4 ? barNormalizedAudio * 3 : 1);
+                const burstRadius = Math.max(8, Math.min(25, 12 + burstIntensity * 8)); // Much larger burst range
+                const burstAngle = (i / 24) * Math.PI * 2;
                 const burstX = Math.cos(burstAngle) * burstRadius;
                 const burstZ = Math.sin(burstAngle) * burstRadius;
                 
                 if (isFinite(burstX) && isFinite(burstZ) && isFinite(burstIntensity)) {
                   barMesh.position.x = burstX;
                   barMesh.position.z = burstZ;
-                  barMesh.position.y = 0;
-                  barMesh.scale.y = Math.max(0.1, Math.min(6, 0.2 + burstIntensity * 4));
-                  barMesh.scale.x = barMesh.scale.z = Math.max(0.5, Math.min(3, 1 + burstIntensity));
+                  barMesh.position.y = Math.sin(currentTime + i * 0.3) * 2;
+                  barMesh.scale.y = Math.max(2, Math.min(20, 4 + burstIntensity * 12)); // Much taller bars
+                  barMesh.scale.x = barMesh.scale.z = Math.max(1, Math.min(4, 1.5 + burstIntensity * 2));
                 }
               } catch (error) {
                 console.warn('Burst animation error:', error);
                 // Fallback to default
-                barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
-                barMesh.scale.x = barMesh.scale.z = 1;
+                barMesh.scale.y = 4 + barNormalizedAudio * 12;
+                barMesh.scale.x = barMesh.scale.z = 1.5;
               }
               break;
               
             default: // 'bars'
-              // Standard frequency bars
-              const scaleY = 0.3 + barNormalizedAudio * 3;
+              // DRAMATIC Standard frequency bars - much larger
+              const scaleY = 2 + barNormalizedAudio * 15; // Much taller bars
               barMesh.scale.y = scaleY;
-              // Reset position and scale
-              barMesh.position.x = Math.cos((i / 12) * Math.PI * 2) * 4;
-              barMesh.position.z = Math.sin((i / 12) * Math.PI * 2) * 4;
+              // Reset position and scale to larger circle
+              barMesh.position.x = Math.cos((i / 24) * Math.PI * 2) * 8;
+              barMesh.position.z = Math.sin((i / 24) * Math.PI * 2) * 8;
               barMesh.position.y = 0;
-              barMesh.scale.x = barMesh.scale.z = 1;
+              barMesh.scale.x = barMesh.scale.z = 1.5 + barNormalizedAudio * 2; // Thicker bars
               barMesh.rotation.y = 0;
           }
         }
@@ -302,10 +302,13 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         </Text>
       )}
 
-      {/* Frequency bars around song node - only when playing */}
+      {/* DRAMATIC Frequency bars around song node - much larger and colorful */}
       {isCurrentlyPlaying && frequencyBars.map((bar, index) => {
-        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
-        const color = colors[index % colors.length];
+        // Dynamic rainbow colors that cycle with time and audio
+        const time = Date.now() * 0.003;
+        const hue = (time * 60 + index * 15) % 360;
+        const color = `hsl(${hue}, 100%, 65%)`;
+        
         return (
           <mesh
             key={`freq-bar-${index}`}
@@ -313,11 +316,11 @@ export default function SongNode({ position, songData }: SongNodeProps) {
             position={bar.position}
             rotation={bar.rotation}
           >
-            <boxGeometry args={[0.2, 2, 0.2]} />
+            <boxGeometry args={[0.8, 3, 0.8]} /> {/* Much thicker and taller bars */}
             <meshBasicMaterial 
               color={color} 
               transparent 
-              opacity={0.8}
+              opacity={0.9}
             />
           </mesh>
         );

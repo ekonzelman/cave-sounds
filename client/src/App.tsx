@@ -5,6 +5,7 @@ import { useAudio } from "./lib/stores/useAudio";
 import { useMusicExplorer } from "./lib/stores/useMusicExplorer";
 import "@fontsource/inter";
 import Cave from "./components/Cave";
+import GlobalAudioEffects from "./components/GlobalAudioEffects";
 import Player from "./components/Player";
 import GameUI from "./components/GameUI";
 import AdminPanel from "./components/AdminPanel";
@@ -108,6 +109,7 @@ function App() {
                 maxDistance={100}
                 maxPolarAngle={Math.PI / 1.5}
               /> */}
+              <GlobalAudioEffects />
               <Cave />
               <Player />
               <AudioVisualizer />

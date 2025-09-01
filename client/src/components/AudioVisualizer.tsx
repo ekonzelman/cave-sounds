@@ -14,7 +14,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
   const { currentSong, audioAnalyzer, visualizationFilter: activeFilter, playerPosition, songNodes } = useMusicExplorer();
   const { isMuted } = useAudio();
   
-  const particleCount = 200;
+  const particleCount = 1000; // Much more particles for dramatic effect
   const currentFilter = visualizationFilter || activeFilter;
 
   // Dynamic particles for audio visualization
@@ -24,11 +24,11 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     const basePositions = new Float32Array(particleCount * 3);
     
     for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2;
-      const radius = 5 + (i % 10);
+      const angle = (i / particleCount) * Math.PI * 4; // More spiral distribution
+      const radius = 15 + (i % 30); // Much larger spread
       
       const x = Math.cos(angle) * radius;
-      const y = (i % 20) - 10;
+      const y = (i % 40) - 20; // Taller distribution
       const z = Math.sin(angle) * radius;
       
       positions[i * 3] = basePositions[i * 3] = x;
@@ -53,7 +53,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
 
   // Simple frequency bars  
   const barRefs = useRef<THREE.Mesh[]>([]);
-  const barCount = 16; // Further reduced for stability
+  const barCount = 32; // More bars for better visualization
   
   const frequencyBars = useMemo(() => {
     const bars = [];
@@ -61,12 +61,12 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     
     for (let i = 0; i < barCount; i++) {
       const angle = (i / barCount) * Math.PI * 2;
-      const radius = 8; // Start farther out
+      const radius = 20 + (i % 5) * 5; // Much farther out with variation
       
       bars.push({
         position: [
           Math.cos(angle) * radius,
-          6, // Start elevated
+          10 + (i % 3) * 2, // Higher and varied elevation
           Math.sin(angle) * radius
         ] as [number, number, number],
         rotation: [0, angle, 0] as [number, number, number],
@@ -94,16 +94,16 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
       
-      // CLEAR ORBITAL MOTION around center of scene
-      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 1.2; // Fast rotation
-      const radius = 15; // Large radius for visibility
+      // DRAMATIC ORBITAL MOTION - much larger scale
+      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 1.5; // Faster rotation
+      const radius = 40 + normalizedAudio * 20; // Much larger radius that responds to audio
       
       barMesh.position.x = Math.cos(baseAngle) * radius;
       barMesh.position.z = Math.sin(baseAngle) * radius;
-      barMesh.position.y = 10; // High in the air
+      barMesh.position.y = 15 + Math.sin(currentTime + i * 0.3) * 10; // Higher and dancing in air
       
-      // Audio scaling
-      barMesh.scale.y = 1 + normalizedAudio * 4;
+      // DRAMATIC Audio scaling - much taller bars
+      barMesh.scale.y = 2 + normalizedAudio * 15;
       
       // Bar rotation
       barMesh.rotation.y = currentTime * 3;
@@ -137,29 +137,32 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.15}
+          size={currentSong ? 0.5 : 0.15} // Much larger when music is playing
           transparent
-          opacity={0.6}
+          opacity={currentSong ? 0.9 : 0.6}
           vertexColors
           blending={THREE.AdditiveBlending}
         />
       </points>
 
-      {/* Frequency bars - ANIMATED AND ORBITING */}
+      {/* DRAMATIC FREQUENCY BARS - Much larger and more colorful */}
       {frequencyBars.map((bar, index) => {
-        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
-        const color = colors[index % colors.length];
+        // Dynamic rainbow colors that cycle with time
+        const time = Date.now() * 0.002;
+        const hue = (time * 50 + index * 11.25) % 360; // 360/32 = 11.25 degrees per bar
+        const color = `hsl(${hue}, 100%, 60%)`;
+        
         return (
           <mesh
             key={`bar-${index}`}
             ref={(el) => { if (el) barRefs.current[index] = el; }}
             position={[0, 0, 0]} // Start at origin, animation will move them
           >
-            <boxGeometry args={[0.4, 4, 0.4]} />
+            <boxGeometry args={[1.5, 6, 1.5]} /> {/* Much thicker and taller bars */}
             <meshBasicMaterial 
               color={color} 
               transparent 
-              opacity={0.8}
+              opacity={0.9}
             />
           </mesh>
         );
