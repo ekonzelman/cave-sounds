@@ -11,7 +11,7 @@ interface AudioVisualizerProps {
 export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioVisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const particleBufferRef = useRef<THREE.BufferAttribute>(null);
-  const { currentSong, audioAnalyzer, visualizationFilter: activeFilter } = useMusicExplorer();
+  const { currentSong, audioAnalyzer, visualizationFilter: activeFilter, playerPosition, songs } = useMusicExplorer();
   const { isMuted } = useAudio();
   
   const particleCount = 200;
@@ -77,7 +77,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     return bars;
   }, []);
 
-  // Global frequency bars that move around and avoid player
+  // Global frequency bars positioned above the currently playing song node
   useFrame((state) => {
     if (!audioAnalyzer || !currentSong || isMuted) return;
 
@@ -86,7 +86,15 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
 
     const currentTime = state.clock.elapsedTime;
     
-    // Update frequency bars with movement and player avoidance
+    // Find the position of the currently playing song node
+    const currentSongData = songs.find(s => s.id === currentSong.id);
+    const songNodePosition = currentSongData ? {
+      x: currentSongData.x || 0,
+      y: currentSongData.y || 0, 
+      z: currentSongData.z || 0
+    } : { x: 0, y: 0, z: 0 };
+    
+    // Update frequency bars positioned above the song node
     for (let i = 0; i < barRefs.current.length; i++) {
       const barMesh = barRefs.current[i];
       if (!barMesh) continue;
@@ -94,41 +102,34 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
       
-      // Base movement - slowly rotate around the scene
-      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 0.3;
-      const baseRadius = 12;
-      let targetX = Math.cos(baseAngle) * baseRadius;
-      let targetZ = Math.sin(baseAngle) * baseRadius;
+      // Position bars in a circle above the currently playing song node
+      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 0.5;
+      const radius = 8; // Wider circle for visibility
+      const targetX = songNodePosition.x + Math.cos(baseAngle) * radius;
+      const targetZ = songNodePosition.z + Math.sin(baseAngle) * radius;
+      const targetY = songNodePosition.y + 6; // Elevated above the song node
       
-      // Player avoidance - scatter away from player position
-      const playerX = playerPosition.x;
-      const playerZ = playerPosition.z;
-      const distanceToPlayer = Math.sqrt(
-        (targetX - playerX) ** 2 + (targetZ - playerZ) ** 2
-      );
-      
-      // If too close to player, push away
-      if (distanceToPlayer < 8) {
-        const avoidanceStrength = (8 - distanceToPlayer) / 8;
-        const avoidanceAngle = Math.atan2(targetZ - playerZ, targetX - playerX);
-        targetX += Math.cos(avoidanceAngle) * avoidanceStrength * 3;
-        targetZ += Math.sin(avoidanceAngle) * avoidanceStrength * 3;
-      }
-      
-      // Smooth movement towards target position
-      barMesh.position.x += (targetX - barMesh.position.x) * 0.02;
-      barMesh.position.z += (targetZ - barMesh.position.z) * 0.02;
+      // Smooth movement to target position
+      barMesh.position.x += (targetX - barMesh.position.x) * 0.05;
+      barMesh.position.z += (targetZ - barMesh.position.z) * 0.05;
+      barMesh.position.y += (targetY - barMesh.position.y) * 0.05;
       
       // Audio-reactive scaling
-      const scaleY = 0.5 + normalizedAudio * 2.5;
+      const scaleY = 0.5 + normalizedAudio * 3;
       barMesh.scale.y = scaleY;
     }
   });
 
   if (!currentSong) return null;
 
+  // Position the entire visualizer group above the currently playing song
+  const currentSongData = songs.find(s => s.id === currentSong?.id);
+  const groupPosition: [number, number, number] = currentSongData ? 
+    [currentSongData.x || 0, (currentSongData.y || 0) + 8, currentSongData.z || 0] : 
+    [0, 8, 0];
+
   return (
-    <group ref={groupRef} position={[0, 5, 0]}>
+    <group ref={groupRef} position={groupPosition}>
       {/* Simplified particles - static for stability */}
       <points>
         <bufferGeometry>
