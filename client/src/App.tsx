@@ -17,6 +17,8 @@ enum Controls {
   backward = 'backward',
   leftward = 'leftward',
   rightward = 'rightward',
+  upward = 'upward',
+  downward = 'downward',
   interact = 'interact',
   admin = 'admin'
 }
@@ -26,6 +28,8 @@ const controls = [
   { name: Controls.backward, keys: ["KeyS", "ArrowDown"] },
   { name: Controls.leftward, keys: ["KeyA", "ArrowLeft"] },
   { name: Controls.rightward, keys: ["KeyD", "ArrowRight"] },
+  { name: Controls.upward, keys: ["KeyQ", "PageUp"] },
+  { name: Controls.downward, keys: ["KeyZ", "PageDown"] },
   { name: Controls.interact, keys: ["KeyE", "Space"] },
   { name: Controls.admin, keys: ["KeyP"] }
 ];

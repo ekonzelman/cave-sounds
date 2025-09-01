@@ -10,6 +10,8 @@ enum Controls {
   backward = 'backward',
   leftward = 'leftward',
   rightward = 'rightward',
+  upward = 'upward',
+  downward = 'downward',
   interact = 'interact'
 }
 
@@ -88,16 +90,17 @@ export default function Player() {
     // Reset direction
     direction.current.set(0, 0, 0);
 
-    // Calculate movement direction based on camera
+    // Calculate movement direction based on camera (full 3D)
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
-    forward.y = 0;
     forward.normalize();
 
     const right = new THREE.Vector3();
     right.crossVectors(forward, camera.up).normalize();
+    
+    const up = new THREE.Vector3(0, 1, 0); // World up for vertical movement
 
-    // Apply input
+    // Apply input for all 6 directions
     if (keys.forward) {
       direction.current.add(forward);
     }
@@ -109,6 +112,12 @@ export default function Player() {
     }
     if (keys.rightward) {
       direction.current.add(right);
+    }
+    if (keys.upward) {
+      direction.current.add(up);
+    }
+    if (keys.downward) {
+      direction.current.sub(up);
     }
 
     // Normalize and apply speed
@@ -127,14 +136,17 @@ export default function Player() {
     // Apply dampening
     velocity.current.multiplyScalar(dampening);
 
-    // Update position with expanded boundary for point cloud cave
+    // Update position with expanded boundary for point cloud cave (full 3D)
     const newPosition = new THREE.Vector3().copy(playerPosition).add(velocity.current);
     
-    // Expanded boundary for larger point cloud cave
+    // Expanded boundary for larger point cloud cave (3D bounds)
     const boundary = 50;
+    const heightLimit = 30; // Maximum height
+    const floorLevel = -10; // Minimum height (below cave floor)
+    
     newPosition.x = Math.max(-boundary, Math.min(boundary, newPosition.x));
     newPosition.z = Math.max(-boundary, Math.min(boundary, newPosition.z));
-    newPosition.y = 0.5; // Keep player at ground level
+    newPosition.y = Math.max(floorLevel, Math.min(heightLimit, newPosition.y));
 
     // Update player position
     setPlayerPosition(newPosition);
