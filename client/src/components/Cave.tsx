@@ -46,25 +46,25 @@ export default function Cave() {
       const layerPoints = [];
       const particleCount = 3000 + layerIndex * 1000;
       
-      // Create cave-like point distribution
+      // Create stable cave-like point distribution
       for (let i = 0; i < particleCount; i++) {
         // Generate cave-like structure with multiple chambers
         const angle = Math.random() * Math.PI * 2;
         const radius = 15 + Math.random() * (20 + layerIndex * 10);
         const height = Math.random() * 15;
         
-        // Create organic cave shapes
-        const noise = Math.sin(angle * 3) * Math.cos(height * 0.1) * 2;
+        // Create stable organic cave shapes
+        const noise = Math.sin(angle * 3) * Math.cos(height * 0.1) * 1;
         const caveRadius = radius + noise;
         
         const x = Math.cos(angle) * caveRadius;
-        const y = height - 2 + Math.sin(i * 0.01) * 3;
+        const y = height - 2 + Math.sin(i * 0.01) * 1; // Reduced noise
         const z = Math.sin(angle) * caveRadius;
         
-        // Add some stalactites and stalagmites
-        if (Math.random() < 0.3) {
+        // Add stable cave features
+        if (Math.random() < 0.2) {
           const stalactiteHeight = Math.random() < 0.5 ? 12 : -2;
-          layerPoints.push(x, stalactiteHeight + Math.random() * 3, z);
+          layerPoints.push(x, stalactiteHeight, z); // Removed random variation
         } else {
           layerPoints.push(x, y, z);
         }
@@ -115,18 +115,7 @@ export default function Cave() {
     return { positions, colors };
   }, []);
 
-  useFrame((state) => {
-    if (caveRef.current) {
-      // Animate floating particles
-      const time = state.clock.elapsedTime;
-      caveRef.current.children.forEach((child, index) => {
-        if (child.type === 'Points' && child.userData.isFloating) {
-          child.rotation.y = Math.sin(time * 0.1 + index) * 0.02;
-          child.position.y = Math.sin(time * 0.2 + index * 0.5) * 0.5;
-        }
-      });
-    }
-  });
+  // Removed aggressive useFrame animation to fix shaking
 
   return (
     <group ref={caveRef} onClick={handleClick}>
@@ -154,8 +143,8 @@ export default function Cave() {
         </points>
       ))}
 
-      {/* Floating fluorescent particles */}
-      <points userData={{ isFloating: true }}>
+      {/* Static fluorescent particles */}
+      <points>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
@@ -189,7 +178,7 @@ export default function Cave() {
       ))}
 
       {/* Realistic Stalactites - hanging from ceiling */}
-      {[...Array(30)].map((_, i) => {
+      {[...Array(15)].map((_, i) => {
         const angle = (i / 30) * Math.PI * 2 + Math.random() * 0.5;
         const radius = 15 + Math.random() * 30;
         const x = Math.cos(angle) * radius;
@@ -221,7 +210,7 @@ export default function Cave() {
       })}
       
       {/* Realistic Stalagmites - rising from floor */}
-      {[...Array(25)].map((_, i) => {
+      {[...Array(12)].map((_, i) => {
         const angle = (i / 25) * Math.PI * 2 + Math.random() * 0.3;
         const radius = 12 + Math.random() * 35;
         const x = Math.cos(angle) * radius;
@@ -282,7 +271,7 @@ export default function Cave() {
       })}
       
       {/* Aragonite crystal formations - branching structures */}
-      {[...Array(12)].map((_, i) => {
+      {[...Array(6)].map((_, i) => {
         const angle = Math.random() * Math.PI * 2;
         const radius = 25 + Math.random() * 20;
         const x = Math.cos(angle) * radius;
@@ -300,7 +289,7 @@ export default function Cave() {
               />
             </mesh>
             {/* Crystal branches */}
-            {[...Array(8)].map((_, branch) => {
+            {[...Array(4)].map((_, branch) => {
               const branchAngle = (branch / 8) * Math.PI * 2;
               const branchX = Math.cos(branchAngle) * 0.8;
               const branchZ = Math.sin(branchAngle) * 0.8;
@@ -341,7 +330,7 @@ export default function Cave() {
         return (
           <group key={`conulite-${i}`} position={[x, 3 + Math.random() * 4, z]}>
             {/* Spiral rings */}
-            {[...Array(12)].map((_, ring) => {
+            {[...Array(6)].map((_, ring) => {
               const ringRadius = 0.3 + ring * 0.15;
               const ringHeight = ring * 0.1;
               

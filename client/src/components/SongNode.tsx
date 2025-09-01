@@ -33,18 +33,18 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   useFrame((state) => {
     if (!meshRef.current) return;
 
-    // Floating animation
-    meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.3;
+    // Gentle floating animation (much more subtle)
+    meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.8) * 0.1;
     
-    // Rotation animation
-    meshRef.current.rotation.y += 0.02;
+    // Slow rotation animation
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
     
-    // Pulsing effect based on discovery state
-    const scale = isDiscovered ? 1.2 + Math.sin(state.clock.elapsedTime * 3) * 0.2 : 0.8;
+    // Gentle pulsing effect
+    const scale = isDiscovered ? 1.0 + Math.sin(state.clock.elapsedTime * 1.5) * 0.05 : 1.0;
     meshRef.current.scale.setScalar(scale);
 
-    // Text rotation to face camera
-    if (textRef.current && isNearby && isDiscovered) {
+    // Smooth text rotation to face camera (less frequent updates)
+    if (textRef.current && isNearby && isDiscovered && Math.floor(state.clock.elapsedTime * 2) % 2 === 0) {
       textRef.current.lookAt(state.camera.position);
     }
   });
