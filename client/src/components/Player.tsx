@@ -29,7 +29,6 @@ export default function Player() {
   // Set initial camera position
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
-    camera.lookAt(0, 2, 0);
   }, []);
 
   // Handle interactions
@@ -94,11 +93,11 @@ export default function Player() {
     // Apply dampening
     velocity.current.multiplyScalar(dampening);
 
-    // Update position with basic collision detection
+    // Update position with expanded boundary for point cloud cave
     const newPosition = new THREE.Vector3().copy(playerPosition).add(velocity.current);
     
-    // Simple boundary collision (cave walls)
-    const boundary = 23;
+    // Expanded boundary for larger point cloud cave
+    const boundary = 50;
     newPosition.x = Math.max(-boundary, Math.min(boundary, newPosition.x));
     newPosition.z = Math.max(-boundary, Math.min(boundary, newPosition.z));
     newPosition.y = 0.5; // Keep player at ground level
@@ -106,12 +105,7 @@ export default function Player() {
     // Update player position
     setPlayerPosition(newPosition);
     
-    // Update camera to follow player
-    camera.position.x = newPosition.x;
-    camera.position.y = newPosition.y + 2;
-    camera.position.z = newPosition.z;
-
-    // Update player mesh position
+    // Update player mesh position (camera handled by OrbitControls)
     playerRef.current.position.copy(newPosition);
 
     console.log('Player position:', newPosition.x.toFixed(2), newPosition.y.toFixed(2), newPosition.z.toFixed(2));
@@ -119,21 +113,28 @@ export default function Player() {
 
   return (
     <group ref={playerRef}>
-      {/* Simple player representation */}
-      <mesh position={[0, 1, 0]}>
+      {/* Invisible player collision box */}
+      <mesh position={[0, 1, 0]} visible={false}>
         <capsuleGeometry args={[0.5, 1]} />
-        <meshLambertMaterial color="#4a90e2" transparent opacity={0.3} />
+        <meshBasicMaterial transparent opacity={0} />
       </mesh>
       
-      {/* Player light (flashlight effect) */}
-      <spotLight
+      {/* Player presence indicator - glowing orb */}
+      <mesh position={[0, 1, 0]}>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshBasicMaterial
+          color="#ffffff"
+          transparent
+          opacity={0.8}
+        />
+      </mesh>
+      
+      {/* Enhanced light for point cloud visibility */}
+      <pointLight
         position={[0, 1.5, 0]}
-        angle={Math.PI / 6}
-        penumbra={0.5}
-        intensity={2}
-        distance={20}
-        color="#ffeeaa"
-        castShadow
+        intensity={3}
+        distance={30}
+        color="#ffffff"
       />
     </group>
   );

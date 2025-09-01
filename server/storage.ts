@@ -5,8 +5,8 @@ import { neon } from "@neondatabase/serverless";
 import type { SongNode } from "@shared/schema";
 
 // Database connection
-const connection = neon(process.env.DATABASE_URL!);
-const db = drizzle(connection);
+const sql = neon(process.env.DATABASE_URL!);
+const db = drizzle(sql);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;

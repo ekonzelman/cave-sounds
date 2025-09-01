@@ -63,21 +63,21 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   };
 
   const getNodeColor = () => {
-    if (!isDiscovered) return '#444444'; // Hidden/undiscovered
-    if (currentSong?.id === songData.id) return '#ff6b6b'; // Currently playing
-    if (hovered) return '#4ecdc4'; // Hovered
-    return '#45b7d1'; // Discovered but not playing
+    if (!isDiscovered) return '#333333'; // Hidden/undiscovered
+    if (currentSong?.id === songData.id) return '#ff0080'; // Currently playing - bright magenta
+    if (hovered) return '#00ffff'; // Hovered - cyan
+    return '#ffffff'; // Discovered but not playing - white
   };
 
   const getEmissiveColor = () => {
-    if (!isDiscovered) return '#222222';
-    if (currentSong?.id === songData.id) return '#ff3333';
-    return '#2a8fa8';
+    if (!isDiscovered) return '#111111';
+    if (currentSong?.id === songData.id) return '#ff0080';
+    return '#ffffff';
   };
 
   return (
     <group position={position}>
-      {/* Main song node sphere */}
+      {/* Main song node - glowing orb */}
       <mesh
         ref={meshRef}
         onClick={handleClick}
@@ -85,36 +85,36 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         onPointerOut={() => setHovered(false)}
       >
         <sphereGeometry args={[0.8, 16, 16]} />
-        <meshPhongMaterial
+        <meshBasicMaterial
           color={getNodeColor()}
-          emissive={getEmissiveColor()}
           transparent
-          opacity={isDiscovered ? 0.9 : 0.3}
+          opacity={isDiscovered ? 1 : 0.5}
         />
       </mesh>
 
-      {/* Outer glow ring */}
+      {/* Outer glow ring - fluorescent */}
       {isDiscovered && (
-        <mesh position={[0, 0, 0]}>
-          <ringGeometry args={[1.2, 1.5, 16]} />
+        <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <ringGeometry args={[1.2, 1.8, 32]} />
           <meshBasicMaterial
             color={getNodeColor()}
             transparent
-            opacity={0.3}
+            opacity={0.6}
             side={THREE.DoubleSide}
           />
         </mesh>
       )}
 
-      {/* Particles around discovered nodes */}
+      {/* Particle system around discovered nodes */}
       {isDiscovered && (
         <points>
-          <sphereGeometry args={[2, 32, 32]} />
+          <sphereGeometry args={[3, 64, 64]} />
           <pointsMaterial
             color={getNodeColor()}
-            size={0.05}
+            size={0.08}
             transparent
-            opacity={0.6}
+            opacity={0.8}
+            blending={THREE.AdditiveBlending}
           />
         </points>
       )}

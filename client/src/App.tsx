@@ -76,7 +76,7 @@ function App() {
             shadows
             camera={{
               position: [0, 5, 10],
-              fov: 60,
+              fov: 75,
               near: 0.1,
               far: 1000
             }}
@@ -86,21 +86,23 @@ function App() {
               alpha: false
             }}
           >
-            <color attach="background" args={["#0a0a0a"]} />
+            <color attach="background" args={["#000000"]} />
             
-            {/* Basic lighting for cave atmosphere */}
-            <ambientLight intensity={0.1} color="#4a4a7a" />
-            <directionalLight 
-              position={[10, 10, 5]} 
-              intensity={0.3}
-              color="#ffffff"
-              castShadow
-              shadow-mapSize-width={2048}
-              shadow-mapSize-height={2048}
-            />
-            <pointLight position={[0, 10, 0]} intensity={0.5} color="#ffa500" distance={50} />
+            {/* Minimal lighting for point cloud effect */}
+            <ambientLight intensity={0.2} color="#ffffff" />
+            <pointLight position={[0, 10, 0]} intensity={1} color="#00ffff" distance={100} />
+            <pointLight position={[20, 5, 20]} intensity={0.8} color="#ff00ff" distance={80} />
+            <pointLight position={[-20, 5, -20]} intensity={0.8} color="#ffff00" distance={80} />
 
             <Suspense fallback={null}>
+              <OrbitControls 
+                enableDamping 
+                dampingFactor={0.05}
+                screenSpacePanning={false}
+                minDistance={3}
+                maxDistance={100}
+                maxPolarAngle={Math.PI / 1.5}
+              />
               <Cave />
               <Player />
             </Suspense>
