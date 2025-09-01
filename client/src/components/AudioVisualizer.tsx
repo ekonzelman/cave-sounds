@@ -51,109 +51,52 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     return { positions, colors, basePositions };
   }, []);
 
-  // Frequency bars with refs for animation
+  // Simple frequency bars  
+  const barRefs = useRef<THREE.Mesh[]>([]);
+  const barCount = 16; // Further reduced for stability
+  
   const frequencyBars = useMemo(() => {
     const bars = [];
-    const barCount = 32; // Reduced for better performance
+    barRefs.current = [];
     
     for (let i = 0; i < barCount; i++) {
       const angle = (i / barCount) * Math.PI * 2;
-      const radius = 8;
+      const radius = 6;
       
       bars.push({
         position: [
           Math.cos(angle) * radius,
-          0,
+          1, // Slightly elevated
           Math.sin(angle) * radius
         ] as [number, number, number],
         rotation: [0, angle, 0] as [number, number, number],
-        baseHeight: 1,
-        currentHeight: 1,
-        ref: React.createRef<THREE.Mesh>()
+        index: i
       });
     }
     
     return bars;
   }, []);
 
-  // Audio-reactive animations with debugging
+  // Simplified audio-reactive animations
   useFrame(() => {
     if (!audioAnalyzer || !currentSong || isMuted) return;
 
     const frequencyData = audioAnalyzer.getFrequencyData();
-    const waveformData = audioAnalyzer.getWaveformData();
-    
-    if (!frequencyData || !waveformData) {
-      console.log('No audio data available');
-      return;
-    }
-    
-    // Debug audio data flow
-    const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
-    if (avgFrequency > 10) {
-      console.log('Audio data flowing - avg frequency:', avgFrequency, 'bars:', frequencyBars.length);
-    }
+    if (!frequencyData) return;
 
-    // Update particle positions based on audio
-    for (let i = 0; i < particleCount; i++) {
+    // Skip particle animations to reduce complexity
+    
+    // Update frequency bars with simple, stable animation
+    for (let i = 0; i < barRefs.current.length; i++) {
+      const barMesh = barRefs.current[i];
+      if (!barMesh) continue;
+      
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
       
-      const baseY = particles.basePositions[i * 3 + 1];
-      particles.positions[i * 3 + 1] = baseY + normalizedAudio * 3;
-    }
-    
-    // Update particle buffer with proper array assignment
-    if (particleBufferRef.current) {
-      const bufferArray = particleBufferRef.current.array as Float32Array;
-      for (let i = 0; i < particles.positions.length; i++) {
-        bufferArray[i] = particles.positions[i];
-      }
-      particleBufferRef.current.needsUpdate = true;
-    }
-    
-    // Update frequency bars with direct mesh scale manipulation
-    let anyBarAnimated = false;
-    frequencyBars.forEach((bar, i) => {
-      if (!bar.ref.current) {
-        console.log(`Bar ${i} ref not found`);
-        return;
-      }
-      
-      const audioValue = frequencyData[i % frequencyData.length] || 0;
-      const normalizedAudio = audioValue / 255;
-      let scaleY = 1;
-      
-      switch (currentFilter) {
-        case 'bars':
-          scaleY = 1 + normalizedAudio * 4;
-          break;
-        case 'wave':
-          const wave = Math.sin((i / frequencyBars.length) * Math.PI * 4) * normalizedAudio;
-          scaleY = 1 + Math.abs(wave) * 3;
-          break;
-        case 'spiral':
-          const spiral = Math.sin((i / frequencyBars.length) * Math.PI * 8 + Date.now() * 0.001);
-          scaleY = 1 + (Math.abs(spiral) * normalizedAudio + normalizedAudio) * 2;
-          break;
-        case 'burst':
-          const burst = normalizedAudio > 0.4 ? normalizedAudio * 6 : 0.5;
-          scaleY = 1 + burst;
-          break;
-        default:
-          scaleY = 1 + normalizedAudio * 4;
-      }
-      
-      // Apply the scale directly to the mesh
-      const finalScale = Math.max(0.2, scaleY);
-      bar.ref.current.scale.set(1, finalScale, 1);
-      bar.currentHeight = finalScale;
-      
-      if (finalScale > 1.5) anyBarAnimated = true;
-    });
-    
-    if (anyBarAnimated && avgFrequency > 15) {
-      console.log('Frequency bars should be animating!');
+      // Simple scaling based on frequency data
+      const scaleY = 0.5 + normalizedAudio * 2.5;
+      barMesh.scale.y = scaleY;
     }
   });
 
@@ -161,11 +104,10 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
 
   return (
     <group ref={groupRef} position={[0, 5, 0]}>
-      {/* Dynamic audio particles */}
+      {/* Simplified particles - static for stability */}
       <points>
         <bufferGeometry>
           <bufferAttribute
-            ref={particleBufferRef}
             attach="attributes-position"
             array={particles.positions}
             count={particleCount}
@@ -179,31 +121,30 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
           />
         </bufferGeometry>
         <pointsMaterial
-          size={currentFilter === 'burst' ? 0.4 : 0.2}
+          size={0.15}
           transparent
-          opacity={currentFilter === 'wave' ? 0.9 : 0.8}
+          opacity={0.6}
           vertexColors
           blending={THREE.AdditiveBlending}
         />
       </points>
 
-      {/* Dynamic frequency bars - always visible */}
+      {/* Frequency bars - simplified and working */}
       {frequencyBars.map((bar, index) => {
         const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
         const color = colors[index % colors.length];
         return (
           <mesh
             key={`bar-${index}`}
-            ref={bar.ref}
+            ref={(el) => { if (el) barRefs.current[index] = el; }}
             position={bar.position}
             rotation={bar.rotation}
-            userData={{ isFrequencyBar: true, barIndex: index }}
           >
-            <boxGeometry args={[0.4, 2, 0.4]} />
+            <boxGeometry args={[0.3, 2, 0.3]} />
             <meshBasicMaterial 
               color={color} 
               transparent 
-              opacity={0.9}
+              opacity={0.8}
             />
           </mesh>
         );
