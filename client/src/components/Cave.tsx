@@ -115,7 +115,7 @@ export default function Cave() {
     return { positions, colors };
   }, []);
 
-  // Removed aggressive useFrame animation to fix shaking
+  // Completely removed all animations to prevent any shaking or movement
 
   return (
     <group ref={caveRef} onClick={handleClick}>

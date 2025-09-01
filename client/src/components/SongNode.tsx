@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { Text, Sphere } from '@react-three/drei';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
 import { useAudio } from '../lib/stores/useAudio';
@@ -30,24 +29,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const isNearby = distanceToPlayer < 3;
   const isDiscovered = songData.discovered;
 
-  useFrame((state) => {
-    if (!meshRef.current) return;
-
-    // Gentle floating animation (much more subtle)
-    meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.8) * 0.1;
-    
-    // Slow rotation animation
-    meshRef.current.rotation.y = state.clock.elapsedTime * 0.3;
-    
-    // Gentle pulsing effect
-    const scale = isDiscovered ? 1.0 + Math.sin(state.clock.elapsedTime * 1.5) * 0.05 : 1.0;
-    meshRef.current.scale.setScalar(scale);
-
-    // Smooth text rotation to face camera (less frequent updates)
-    if (textRef.current && isNearby && isDiscovered && Math.floor(state.clock.elapsedTime * 2) % 2 === 0) {
-      textRef.current.lookAt(state.camera.position);
-    }
-  });
+  // NO ANIMATIONS - completely static objects to prevent shaking
 
   const handleClick = () => {
     if (!isDiscovered) {
@@ -77,7 +59,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
 
   return (
     <group position={position}>
-      {/* Main song node - glowing orb */}
+      {/* Main song node - completely static glowing orb */}
       <mesh
         ref={meshRef}
         onClick={handleClick}
@@ -92,7 +74,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         />
       </mesh>
 
-      {/* Outer glow ring - always visible */}
+      {/* Outer glow ring - always visible, static */}
       <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
         <ringGeometry args={[2, 3.5, 32]} />
         <meshBasicMaterial
@@ -104,7 +86,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         />
       </mesh>
 
-      {/* Particle system around all nodes */}
+      {/* Particle system around all nodes - static */}
       <points>
         <sphereGeometry args={[4, 64, 64]} />
         <pointsMaterial
@@ -116,7 +98,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         />
       </points>
       
-      {/* Extra bright beacon for undiscovered nodes */}
+      {/* Extra bright beacon for undiscovered nodes - static */}
       {!isDiscovered && (
         <pointLight
           position={[0, 0, 0]}
@@ -126,7 +108,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         />
       )}
 
-      {/* Song title text */}
+      {/* Song title text - static */}
       {isNearby && isDiscovered && (
         <Text
           ref={textRef}
@@ -142,7 +124,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         </Text>
       )}
 
-      {/* Interaction hint */}
+      {/* Interaction hint - static */}
       {isNearby && (
         <Text
           position={[0, -1.5, 0]}
@@ -157,7 +139,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         </Text>
       )}
 
-      {/* Discovery effect */}
+      {/* Discovery effect - static */}
       {!isDiscovered && isNearby && (
         <mesh>
           <sphereGeometry args={[1.5, 8, 8]} />
