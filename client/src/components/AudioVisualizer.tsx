@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
 import { useAudio } from '../lib/stores/useAudio';
@@ -51,10 +51,10 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     return { positions, colors, basePositions };
   }, []);
 
-  // Dynamic frequency bars
+  // Frequency bars with refs for animation
   const frequencyBars = useMemo(() => {
     const bars = [];
-    const barCount = 64;
+    const barCount = 32; // Reduced for better performance
     
     for (let i = 0; i < barCount; i++) {
       const angle = (i / barCount) * Math.PI * 2;
@@ -68,21 +68,31 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
         ] as [number, number, number],
         rotation: [0, angle, 0] as [number, number, number],
         baseHeight: 1,
-        currentHeight: 1
+        currentHeight: 1,
+        ref: React.createRef<THREE.Mesh>()
       });
     }
     
     return bars;
   }, []);
 
-  // Audio-reactive animations
+  // Audio-reactive animations with debugging
   useFrame(() => {
     if (!audioAnalyzer || !currentSong || isMuted) return;
 
     const frequencyData = audioAnalyzer.getFrequencyData();
     const waveformData = audioAnalyzer.getWaveformData();
     
-    if (!frequencyData || !waveformData) return;
+    if (!frequencyData || !waveformData) {
+      console.log('No audio data available');
+      return;
+    }
+    
+    // Debug audio data flow
+    const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
+    if (avgFrequency > 10) {
+      console.log('Audio data flowing - avg frequency:', avgFrequency);
+    }
 
     // Update particle positions based on audio
     for (let i = 0; i < particleCount; i++) {
@@ -93,36 +103,46 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       particles.positions[i * 3 + 1] = baseY + normalizedAudio * 3;
     }
     
-    // Update particle buffer
+    // Update particle buffer with proper array assignment
     if (particleBufferRef.current) {
-      particleBufferRef.current.array = particles.positions;
+      const bufferArray = particleBufferRef.current.array as Float32Array;
+      for (let i = 0; i < particles.positions.length; i++) {
+        bufferArray[i] = particles.positions[i];
+      }
       particleBufferRef.current.needsUpdate = true;
     }
     
-    // Update frequency bars with visualization filters
+    // Update frequency bars with direct mesh scale manipulation
     frequencyBars.forEach((bar, i) => {
+      if (!bar.ref.current) return;
+      
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
+      let scaleY = 1;
       
       switch (currentFilter) {
         case 'bars':
-          bar.currentHeight = bar.baseHeight + normalizedAudio * 5;
+          scaleY = 1 + normalizedAudio * 4;
           break;
         case 'wave':
           const wave = Math.sin((i / frequencyBars.length) * Math.PI * 4) * normalizedAudio;
-          bar.currentHeight = bar.baseHeight + Math.abs(wave) * 3;
+          scaleY = 1 + Math.abs(wave) * 3;
           break;
         case 'spiral':
           const spiral = Math.sin((i / frequencyBars.length) * Math.PI * 8 + Date.now() * 0.001);
-          bar.currentHeight = bar.baseHeight + (spiral * normalizedAudio + normalizedAudio) * 2;
+          scaleY = 1 + (Math.abs(spiral) * normalizedAudio + normalizedAudio) * 2;
           break;
         case 'burst':
-          const burst = normalizedAudio > 0.5 ? normalizedAudio * 8 : 0;
-          bar.currentHeight = bar.baseHeight + burst;
+          const burst = normalizedAudio > 0.4 ? normalizedAudio * 6 : 0.5;
+          scaleY = 1 + burst;
           break;
         default:
-          bar.currentHeight = bar.baseHeight + normalizedAudio * 5;
+          scaleY = 1 + normalizedAudio * 4;
       }
+      
+      // Apply the scale directly to the mesh
+      bar.ref.current.scale.set(1, Math.max(0.1, scaleY), 1);
+      bar.currentHeight = scaleY;
     });
   });
 
@@ -163,16 +183,16 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
         return (
           <mesh
             key={`bar-${index}`}
+            ref={bar.ref}
             position={bar.position}
             rotation={bar.rotation}
-            scale={[1, bar.currentHeight, 1]}
             userData={{ isFrequencyBar: true, barIndex: index }}
           >
-            <boxGeometry args={[0.3, 1, 0.3]} />
+            <boxGeometry args={[0.4, 2, 0.4]} />
             <meshBasicMaterial 
               color={color} 
               transparent 
-              opacity={0.8}
+              opacity={0.9}
             />
           </mesh>
         );

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Text, Sphere } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
 import { useAudio } from '../lib/stores/useAudio';
 import * as THREE from 'three';
@@ -17,8 +18,9 @@ interface SongNodeProps {
 export default function SongNode({ position, songData }: SongNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const textRef = useRef<THREE.Mesh>(null);
+  const outerRingRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
-  const { playerPosition, discoverSongNode, currentSong, setCurrentSong } = useMusicExplorer();
+  const { playerPosition, discoverSongNode, currentSong, setCurrentSong, audioAnalyzer } = useMusicExplorer();
   const { playSuccess } = useAudio();
 
   // Calculate distance to player
@@ -28,8 +30,39 @@ export default function SongNode({ position, songData }: SongNodeProps) {
 
   const isNearby = distanceToPlayer < 3;
   const isDiscovered = songData.discovered;
+  const isCurrentlyPlaying = currentSong?.id === songData.id;
 
-  // NO ANIMATIONS - completely static objects to prevent shaking
+  // Add animations when music is playing
+  useFrame((state) => {
+    if (!meshRef.current || !outerRingRef.current) return;
+    
+    // Only animate if this song is currently playing
+    if (isCurrentlyPlaying && audioAnalyzer) {
+      const frequencyData = audioAnalyzer.getFrequencyData();
+      if (frequencyData) {
+        // Get audio intensity for pulsing effect
+        const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
+        const normalizedAudio = avgFrequency / 255;
+        
+        // Pulse the main sphere based on audio
+        const pulseScale = 1 + normalizedAudio * 0.3;
+        meshRef.current.scale.setScalar(pulseScale);
+        
+        // Rotate the outer ring
+        outerRingRef.current.rotation.z += 0.02;
+        
+        // Additional pulsing for the ring
+        const ringScale = 1 + normalizedAudio * 0.2;
+        outerRingRef.current.scale.setScalar(ringScale);
+      }
+    } else {
+      // Reset to normal size when not playing
+      meshRef.current.scale.setScalar(1);
+      if (outerRingRef.current) {
+        outerRingRef.current.scale.setScalar(1);
+      }
+    }
+  });
 
   const handleClick = () => {
     if (!isDiscovered) {
@@ -74,8 +107,8 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         />
       </mesh>
 
-      {/* Outer glow ring - always visible, static */}
-      <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+      {/* Outer glow ring - animated when playing */}
+      <mesh ref={outerRingRef} position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
         <ringGeometry args={[2, 3.5, 32]} />
         <meshBasicMaterial
           color={getNodeColor()}
