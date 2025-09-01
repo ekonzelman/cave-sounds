@@ -28,6 +28,7 @@ interface MusicExplorerState {
   audioElement: HTMLAudioElement | null;
   audioAnalyzer: AudioAnalyzer | null;
   visualizationFilter: VisualizationFilter;
+  isPaused: boolean;
   
   // Actions
   setPlayerPosition: (position: THREE.Vector3) => void;
@@ -35,7 +36,10 @@ interface MusicExplorerState {
   addSongNode: (node: SongNode) => void;
   discoverSongNode: (nodeId: string) => void;
   setCurrentSong: (song: SongNode) => void;
+  pauseCurrentSong: () => void;
+  resumeCurrentSong: () => void;
   stopCurrentSong: () => void;
+  togglePlayPause: (song: SongNode) => void;
   setVisualizationFilter: (filter: VisualizationFilter) => void;
   checkSongNodeInteraction: () => void;
   uploadAudioFile: (file: File) => Promise<void>;
@@ -99,6 +103,7 @@ export const useMusicExplorer = create<MusicExplorerState>()(
     audioElement: null,
     audioAnalyzer: null,
     visualizationFilter: "bars",
+    isPaused: false,
 
     setPlayerPosition: (position) => set({ playerPosition: position }),
 
@@ -156,8 +161,27 @@ export const useMusicExplorer = create<MusicExplorerState>()(
       set({
         currentSong: song,
         audioElement: newAudioElement,
-        audioAnalyzer: newAnalyzer
+        audioAnalyzer: newAnalyzer,
+        isPaused: false
       });
+    },
+
+    pauseCurrentSong: () => {
+      const { audioElement } = get();
+      if (audioElement && !audioElement.paused) {
+        audioElement.pause();
+        set({ isPaused: true });
+      }
+    },
+
+    resumeCurrentSong: () => {
+      const { audioElement } = get();
+      if (audioElement && audioElement.paused) {
+        audioElement.play().catch(error => {
+          console.error('Error resuming audio:', error);
+        });
+        set({ isPaused: false });
+      }
     },
 
     stopCurrentSong: () => {
@@ -169,8 +193,25 @@ export const useMusicExplorer = create<MusicExplorerState>()(
       set({
         currentSong: null,
         audioElement: null,
-        audioAnalyzer: null
+        audioAnalyzer: null,
+        isPaused: false
       });
+    },
+
+    togglePlayPause: (song) => {
+      const { currentSong, isPaused, setCurrentSong, pauseCurrentSong, resumeCurrentSong } = get();
+      
+      // If it's not the current song, play it
+      if (!currentSong || currentSong.id !== song.id) {
+        setCurrentSong(song);
+      } else {
+        // If it's the same song, toggle pause/resume
+        if (isPaused) {
+          resumeCurrentSong();
+        } else {
+          pauseCurrentSong();
+        }
+      }
     },
 
     setVisualizationFilter: (filter) => set({ visualizationFilter: filter }),

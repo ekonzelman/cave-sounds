@@ -21,7 +21,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const outerRingRef = useRef<THREE.Mesh>(null);
   const frequencyBarRefs = useRef<THREE.Mesh[]>([]);
   const [hovered, setHovered] = useState(false);
-  const { playerPosition, discoverSongNode, currentSong, setCurrentSong, audioAnalyzer } = useMusicExplorer();
+  const { playerPosition, discoverSongNode, currentSong, togglePlayPause, audioAnalyzer, isPaused, visualizationFilter } = useMusicExplorer();
   const { playSuccess } = useAudio();
 
   // Frequency bars around this song node
@@ -56,7 +56,6 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const isNearby = distanceToPlayer < 3;
   const isDiscovered = songData.discovered;
   const isCurrentlyPlaying = currentSong?.id === songData.id;
-  const { visualizationFilter } = useMusicExplorer();
 
   // Add animations when music is playing
   useFrame((state) => {
@@ -198,9 +197,10 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         playSuccess();
         console.log(`Discovered song: ${songData.title}`);
       } else {
-        // Play the song - pass the full songData 
-        setCurrentSong({ ...songData, position });
-        console.log(`Playing song: ${songData.title}`);
+        // Use toggle play/pause for discovered songs
+        togglePlayPause({ ...songData, position });
+        const action = currentSong?.id === songData.id && !isPaused ? 'Paused' : 'Playing';
+        console.log(`${action} song: ${songData.title}`);
       }
     } catch (error) {
       console.error('Song node interaction error:', error);
