@@ -257,6 +257,26 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         </Text>
       )}
 
+      {/* Frequency bars around song node - only when playing */}
+      {isCurrentlyPlaying && frequencyBars.map((bar, index) => {
+        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
+        const color = colors[index % colors.length];
+        return (
+          <mesh
+            key={`freq-bar-${index}`}
+            ref={(el) => { if (el) frequencyBarRefs.current[index] = el; }}
+            position={bar.position}
+            rotation={bar.rotation}
+          >
+            <boxGeometry args={[0.2, 2, 0.2]} />
+            <meshBasicMaterial 
+              color={color} 
+              transparent 
+              opacity={0.8}
+            />
+          </mesh>
+        );
+      })}
 
       {/* Discovery effect - static */}
       {!isDiscovered && isNearby && (
