@@ -95,31 +95,71 @@ export default function SongNode({ position, songData }: SongNodeProps) {
           switch (visualizationFilter) {
             case 'wave':
               // Wave motion - bars move in a sine wave pattern
-              const waveOffset = Math.sin((i / 12) * Math.PI * 2 + currentTime * 2) * 0.5;
-              const waveScale = 0.3 + barNormalizedAudio * 2 + Math.abs(waveOffset);
-              barMesh.scale.y = waveScale;
-              barMesh.position.y = waveOffset;
+              try {
+                const waveOffset = Math.sin((i / 12) * Math.PI * 2 + currentTime * 2) * 0.5;
+                const waveScale = Math.max(0.1, Math.min(5, 0.3 + barNormalizedAudio * 2 + Math.abs(waveOffset)));
+                
+                if (isFinite(waveOffset) && isFinite(waveScale)) {
+                  barMesh.scale.y = waveScale;
+                  barMesh.position.y = waveOffset;
+                  // Reset other positions to original circle
+                  const baseAngle = (i / 12) * Math.PI * 2;
+                  barMesh.position.x = Math.cos(baseAngle) * 4;
+                  barMesh.position.z = Math.sin(baseAngle) * 4;
+                  barMesh.rotation.y = 0;
+                }
+              } catch (error) {
+                console.warn('Wave animation error:', error);
+                barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
+                barMesh.position.y = 0;
+              }
               break;
               
             case 'spiral':
               // Spiral dance - bars rotate and pulse in a spiral
-              const spiralAngle = (i / 12) * Math.PI * 2 + currentTime;
-              const spiralRadius = 4 + Math.sin(currentTime + i * 0.2) * 0.5;
-              barMesh.position.x = Math.cos(spiralAngle) * spiralRadius;
-              barMesh.position.z = Math.sin(spiralAngle) * spiralRadius;
-              barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
-              barMesh.rotation.y = spiralAngle;
+              try {
+                const spiralAngle = (i / 12) * Math.PI * 2 + currentTime * 0.5;
+                const spiralRadius = Math.max(3, 4 + Math.sin(currentTime * 0.8 + i * 0.3) * 1);
+                const safeX = Math.cos(spiralAngle) * spiralRadius;
+                const safeZ = Math.sin(spiralAngle) * spiralRadius;
+                
+                // Ensure values are finite
+                if (isFinite(safeX) && isFinite(safeZ) && isFinite(spiralAngle)) {
+                  barMesh.position.x = safeX;
+                  barMesh.position.z = safeZ;
+                  barMesh.position.y = Math.sin(currentTime + i * 0.1) * 0.5;
+                  barMesh.scale.y = Math.max(0.2, 0.3 + barNormalizedAudio * 3);
+                  barMesh.rotation.y = spiralAngle * 0.5;
+                }
+              } catch (error) {
+                console.warn('Spiral animation error:', error);
+                // Fallback to default position
+                barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
+              }
               break;
               
             case 'burst':
               // Energy burst - bars explode outward with high frequencies
-              const burstIntensity = barNormalizedAudio > 0.6 ? barNormalizedAudio * 2 : 0.3;
-              const burstRadius = 4 + burstIntensity * 2;
-              const burstAngle = (i / 12) * Math.PI * 2;
-              barMesh.position.x = Math.cos(burstAngle) * burstRadius;
-              barMesh.position.z = Math.sin(burstAngle) * burstRadius;
-              barMesh.scale.y = 0.2 + burstIntensity * 4;
-              barMesh.scale.x = barMesh.scale.z = 1 + burstIntensity;
+              try {
+                const burstIntensity = Math.max(0.1, barNormalizedAudio > 0.6 ? barNormalizedAudio * 2 : 0.3);
+                const burstRadius = Math.max(2, Math.min(8, 4 + burstIntensity * 2));
+                const burstAngle = (i / 12) * Math.PI * 2;
+                const burstX = Math.cos(burstAngle) * burstRadius;
+                const burstZ = Math.sin(burstAngle) * burstRadius;
+                
+                if (isFinite(burstX) && isFinite(burstZ) && isFinite(burstIntensity)) {
+                  barMesh.position.x = burstX;
+                  barMesh.position.z = burstZ;
+                  barMesh.position.y = 0;
+                  barMesh.scale.y = Math.max(0.1, Math.min(6, 0.2 + burstIntensity * 4));
+                  barMesh.scale.x = barMesh.scale.z = Math.max(0.5, Math.min(3, 1 + burstIntensity));
+                }
+              } catch (error) {
+                console.warn('Burst animation error:', error);
+                // Fallback to default
+                barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
+                barMesh.scale.x = barMesh.scale.z = 1;
+              }
               break;
               
             default: // 'bars'
