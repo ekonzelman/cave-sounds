@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
@@ -25,11 +25,45 @@ export default function Player() {
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
+  
+  // Mouse look state
+  const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
+  const [isPointerLocked, setIsPointerLocked] = useState(false);
 
-  // Set initial camera position
+  // Set initial camera position and setup pointer lock
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
-  }, []);
+    
+    // Pointer lock for mouse look
+    const handleClick = () => {
+      document.body.requestPointerLock();
+    };
+    
+    const handlePointerLockChange = () => {
+      setIsPointerLocked(document.pointerLockElement === document.body);
+    };
+    
+    const handleMouseMove = (event: MouseEvent) => {
+      if (document.pointerLockElement === document.body) {
+        const sensitivity = 0.002;
+        euler.current.setFromQuaternion(camera.quaternion);
+        euler.current.y -= event.movementX * sensitivity;
+        euler.current.x -= event.movementY * sensitivity;
+        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+        camera.quaternion.setFromEuler(euler.current);
+      }
+    };
+    
+    document.addEventListener('click', handleClick);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    document.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [camera]);
 
   // Handle interactions
   useEffect(() => {
@@ -105,7 +139,12 @@ export default function Player() {
     // Update player position
     setPlayerPosition(newPosition);
     
-    // Update player mesh position (camera handled by OrbitControls)
+    // Update camera to follow player (first-person)
+    camera.position.x = newPosition.x;
+    camera.position.y = newPosition.y + 1.6; // Eye height
+    camera.position.z = newPosition.z;
+    
+    // Update player mesh position
     playerRef.current.position.copy(newPosition);
 
     console.log('Player position:', newPosition.x.toFixed(2), newPosition.y.toFixed(2), newPosition.z.toFixed(2));

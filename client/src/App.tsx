@@ -95,14 +95,14 @@ function App() {
             <pointLight position={[-20, 5, -20]} intensity={0.8} color="#ffff00" distance={80} />
 
             <Suspense fallback={null}>
-              <OrbitControls 
+              {/* <OrbitControls 
                 enableDamping 
                 dampingFactor={0.05}
                 screenSpacePanning={false}
                 minDistance={3}
                 maxDistance={100}
                 maxPolarAngle={Math.PI / 1.5}
-              />
+              /> */}
               <Cave />
               <Player />
             </Suspense>
