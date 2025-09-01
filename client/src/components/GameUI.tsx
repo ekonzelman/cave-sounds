@@ -57,7 +57,7 @@ export default function GameUI() {
             </div>
             <div>Discovered: {discoveredNodes.length} songs</div>
             <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
-              WASD to move • Q/Z up/down • Enter for mouse look • E to interact • P for admin
+              WASD to move • Q/Z up/down • L for mouse look • E to interact • P for admin
             </div>
           </div>
 

@@ -36,9 +36,9 @@ export default function Player() {
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
     
-    // Pointer lock for mouse look - activated by Enter key to avoid click conflicts
+    // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' && !isPointerLocked) {
+      if ((event.key === 'l' || event.key === 'L') && !isPointerLocked) {
         document.body.requestPointerLock();
       } else if (event.key === 'Escape' && isPointerLocked) {
         document.exitPointerLock();
