@@ -1,7 +1,6 @@
 import React from 'react';
 import { useMusicExplorer } from '../lib/stores/useMusicExplorer';
 import { useAudio } from '../lib/stores/useAudio';
-import AudioVisualizer from './AudioVisualizer';
 
 export default function GameUI() {
   const { 
@@ -23,8 +22,6 @@ export default function GameUI() {
 
   return (
     <>
-      {/* Audio Visualizer */}
-      {currentSong && <AudioVisualizer />}
       
       {/* UI Overlay */}
       <div style={{

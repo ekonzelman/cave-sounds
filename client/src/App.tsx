@@ -8,6 +8,7 @@ import Cave from "./components/Cave";
 import Player from "./components/Player";
 import GameUI from "./components/GameUI";
 import AdminPanel from "./components/AdminPanel";
+import AudioVisualizer from "./components/AudioVisualizer";
 import * as THREE from "three";
 
 // Define control keys for cave exploration
@@ -105,6 +106,7 @@ function App() {
               /> */}
               <Cave />
               <Player />
+              <AudioVisualizer />
             </Suspense>
           </Canvas>
           <GameUI />
