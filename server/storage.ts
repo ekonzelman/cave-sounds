@@ -1,8 +1,8 @@
-import { users, songs, type User, type InsertUser, type Song, type InsertSong, transformSongToNode, transformNodeToSong } from "@shared/schema";
+import { users, songs, caveObjects, type User, type InsertUser, type Song, type InsertSong, type CaveObject, type InsertCaveObject, transformSongToNode, transformNodeToSong, transformCaveObjectToNode } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { neon } from "@neondatabase/serverless";
-import type { SongNode } from "@shared/schema";
+import type { SongNode, CaveObjectNode } from "@shared/schema";
 
 // Database connection
 const connectionString = process.env.DATABASE_URL!;
@@ -19,16 +19,26 @@ export interface IStorage {
   createSong(song: Omit<InsertSong, 'uploadedAt'> & { uploadedAt?: string }): Promise<Song>;
   deleteSong(id: string): Promise<void>;
   updateSongDiscovery(id: string, discovered: boolean): Promise<void>;
+  updateSongCustomization(id: string, customization: Partial<Pick<Song, 'nodeShape' | 'nodeSize' | 'nodeColor' | 'glowIntensity' | 'animationStyle'>>): Promise<void>;
+  
+  // Cave object methods
+  getAllCaveObjects(): Promise<CaveObjectNode[]>;
+  getCaveObject(id: string): Promise<CaveObject | undefined>;
+  createCaveObject(obj: Omit<InsertCaveObject, 'createdAt'> & { createdAt?: string }): Promise<CaveObject>;
+  updateCaveObject(id: string, updates: Partial<Omit<CaveObject, 'id' | 'createdAt'>>): Promise<void>;
+  deleteCaveObject(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private songsMap: Map<string, Song>;
+  private caveObjectsMap: Map<string, CaveObject>;
   currentId: number;
 
   constructor() {
     this.users = new Map();
     this.songsMap = new Map();
+    this.caveObjectsMap = new Map();
     this.currentId = 1;
   }
 
@@ -112,6 +122,85 @@ export class MemStorage implements IStorage {
       if (song) {
         this.songsMap.set(id, { ...song, discovered });
       }
+    }
+  }
+
+  async updateSongCustomization(id: string, customization: Partial<Pick<Song, 'nodeShape' | 'nodeSize' | 'nodeColor' | 'glowIntensity' | 'animationStyle'>>): Promise<void> {
+    try {
+      await db.update(songs).set(customization).where(eq(songs.id, id));
+    } catch (error) {
+      console.error('Error updating song customization in database:', error);
+      // Fallback to in-memory storage
+      const song = this.songsMap.get(id);
+      if (song) {
+        this.songsMap.set(id, { ...song, ...customization });
+      }
+    }
+  }
+
+  // Cave object methods
+  async getAllCaveObjects(): Promise<CaveObjectNode[]> {
+    try {
+      const result = await db.select().from(caveObjects);
+      return result.map(transformCaveObjectToNode);
+    } catch (error) {
+      console.error('Error fetching cave objects from database:', error);
+      // Fallback to in-memory storage
+      return Array.from(this.caveObjectsMap.values()).map(transformCaveObjectToNode);
+    }
+  }
+
+  async getCaveObject(id: string): Promise<CaveObject | undefined> {
+    try {
+      const result = await db.select().from(caveObjects).where(eq(caveObjects.id, id));
+      return result[0];
+    } catch (error) {
+      console.error('Error fetching cave object from database:', error);
+      return this.caveObjectsMap.get(id);
+    }
+  }
+
+  async createCaveObject(obj: Omit<InsertCaveObject, 'createdAt'> & { createdAt?: string }): Promise<CaveObject> {
+    const objectData = {
+      ...obj,
+      createdAt: obj.createdAt ? new Date(obj.createdAt) : new Date()
+    };
+    
+    try {
+      const result = await db.insert(caveObjects).values(objectData).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error inserting cave object into database:', error);
+      // Fallback to in-memory storage
+      const memObject: CaveObject = {
+        ...objectData,
+        createdAt: objectData.createdAt
+      };
+      this.caveObjectsMap.set(obj.id, memObject);
+      return memObject;
+    }
+  }
+
+  async updateCaveObject(id: string, updates: Partial<Omit<CaveObject, 'id' | 'createdAt'>>): Promise<void> {
+    try {
+      await db.update(caveObjects).set(updates).where(eq(caveObjects.id, id));
+    } catch (error) {
+      console.error('Error updating cave object in database:', error);
+      // Fallback to in-memory storage
+      const obj = this.caveObjectsMap.get(id);
+      if (obj) {
+        this.caveObjectsMap.set(id, { ...obj, ...updates });
+      }
+    }
+  }
+
+  async deleteCaveObject(id: string): Promise<void> {
+    try {
+      await db.delete(caveObjects).where(eq(caveObjects.id, id));
+    } catch (error) {
+      console.error('Error deleting cave object from database:', error);
+      // Fallback to in-memory storage
+      this.caveObjectsMap.delete(id);
     }
   }
 }

@@ -140,6 +140,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update song customization
+  app.put('/api/songs/:id/customization', async (req, res) => {
+    try {
+      const songId = req.params.id;
+      const { nodeShape, nodeSize, nodeColor, glowIntensity, animationStyle } = req.body;
+      
+      await storage.updateSongCustomization(songId, {
+        nodeShape,
+        nodeSize,
+        nodeColor,
+        glowIntensity,
+        animationStyle
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating song customization:', error);
+      res.status(500).json({ error: 'Failed to update song customization' });
+    }
+  });
+
+  // Cave objects endpoints
+  app.get('/api/cave-objects', async (req, res) => {
+    try {
+      const caveObjects = await storage.getAllCaveObjects();
+      res.json(caveObjects);
+    } catch (error) {
+      console.error('Error fetching cave objects:', error);
+      res.status(500).json({ error: 'Failed to fetch cave objects' });
+    }
+  });
+
+  app.post('/api/cave-objects', async (req, res) => {
+    try {
+      const { objectType, positionX, positionY, positionZ, scaleX, scaleY, scaleZ, color, opacity, rotationX, rotationY, rotationZ } = req.body;
+      
+      const caveObject = await storage.createCaveObject({
+        id: nanoid(),
+        objectType,
+        positionX: positionX || 0,
+        positionY: positionY || 0,
+        positionZ: positionZ || 0,
+        scaleX: scaleX || 1.0,
+        scaleY: scaleY || 1.0,
+        scaleZ: scaleZ || 1.0,
+        color: color || '#ffffff',
+        opacity: opacity || 0.8,
+        isVisible: true,
+        rotationX: rotationX || 0,
+        rotationY: rotationY || 0,
+        rotationZ: rotationZ || 0
+      });
+      
+      res.json(caveObject);
+    } catch (error) {
+      console.error('Error creating cave object:', error);
+      res.status(500).json({ error: 'Failed to create cave object' });
+    }
+  });
+
+  app.put('/api/cave-objects/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      await storage.updateCaveObject(id, updates);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating cave object:', error);
+      res.status(500).json({ error: 'Failed to update cave object' });
+    }
+  });
+
+  app.delete('/api/cave-objects/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCaveObject(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting cave object:', error);
+      res.status(500).json({ error: 'Failed to delete cave object' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
