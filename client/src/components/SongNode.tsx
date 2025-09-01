@@ -189,16 +189,24 @@ export default function SongNode({ position, songData }: SongNodeProps) {
     }
   });
 
-  const handleClick = () => {
-    if (!isDiscovered) {
-      // Discover the node
-      discoverSongNode(songData.id);
-      playSuccess();
-      console.log(`Discovered song: ${songData.title}`);
-    } else {
-      // Play the song - pass the full songData 
-      setCurrentSong({ ...songData, position });
-      console.log(`Playing song: ${songData.title}`);
+  const handleClick = (event: React.MouseEvent) => {
+    // Prevent pointer lock activation when clicking on song nodes
+    event.stopPropagation();
+    event.preventDefault();
+    
+    try {
+      if (!isDiscovered) {
+        // Discover the node
+        discoverSongNode(songData.id);
+        playSuccess();
+        console.log(`Discovered song: ${songData.title}`);
+      } else {
+        // Play the song - pass the full songData 
+        setCurrentSong({ ...songData, position });
+        console.log(`Playing song: ${songData.title}`);
+      }
+    } catch (error) {
+      console.error('Song node interaction error:', error);
     }
   };
 

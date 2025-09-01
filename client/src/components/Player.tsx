@@ -36,9 +36,13 @@ export default function Player() {
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
     
-    // Pointer lock for mouse look
-    const handleClick = () => {
-      document.body.requestPointerLock();
+    // Pointer lock for mouse look (avoid conflicts with UI elements)
+    const handleClick = (event: MouseEvent) => {
+      // Only activate pointer lock if clicking on the canvas/background, not UI elements
+      const target = event.target as HTMLElement;
+      if (target.tagName.toLowerCase() === 'canvas' || target === document.body) {
+        document.body.requestPointerLock();
+      }
     };
     
     const handlePointerLockChange = () => {
@@ -47,12 +51,20 @@ export default function Player() {
     
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
-        const sensitivity = 0.002;
-        euler.current.setFromQuaternion(camera.quaternion);
-        euler.current.y -= event.movementX * sensitivity;
-        euler.current.x -= event.movementY * sensitivity;
-        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
-        camera.quaternion.setFromEuler(euler.current);
+        try {
+          const sensitivity = 0.002;
+          euler.current.setFromQuaternion(camera.quaternion);
+          euler.current.y -= event.movementX * sensitivity;
+          euler.current.x -= event.movementY * sensitivity;
+          euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+          camera.quaternion.setFromEuler(euler.current);
+        } catch (error) {
+          console.warn('Mouse look error:', error);
+          // Exit pointer lock if there's an error
+          if (document.exitPointerLock) {
+            document.exitPointerLock();
+          }
+        }
       }
     };
     
