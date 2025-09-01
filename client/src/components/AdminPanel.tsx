@@ -209,7 +209,13 @@ export default function AdminPanel() {
                         fontSize: '12px', 
                         color: '#666'
                       }}>
-                        Position: ({song.position[0].toFixed(1)}, {song.position[1].toFixed(1)}, {song.position[2].toFixed(1)})
+                        Position: ({
+                          song.position && song.position[0] !== null ? song.position[0].toFixed(1) : '0.0'
+                        }, {
+                          song.position && song.position[1] !== null ? song.position[1].toFixed(1) : '0.0'
+                        }, {
+                          song.position && song.position[2] !== null ? song.position[2].toFixed(1) : '0.0'
+                        })
                       </div>
                     </div>
                     

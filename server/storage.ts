@@ -5,8 +5,8 @@ import { neon } from "@neondatabase/serverless";
 import type { SongNode } from "@shared/schema";
 
 // Database connection
-const sql = neon(process.env.DATABASE_URL!);
-const db = drizzle(sql);
+const connectionString = process.env.DATABASE_URL!;
+const db = drizzle(neon(connectionString));
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -84,6 +84,7 @@ export class MemStorage implements IStorage {
       // Fallback to in-memory storage
       const memSong: Song = {
         ...songData,
+        discovered: songData.discovered ?? false,
         uploadedAt: songData.uploadedAt
       };
       this.songsMap.set(song.id, memSong);
