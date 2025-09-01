@@ -36,12 +36,12 @@ export default function Player() {
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
     
-    // Pointer lock for mouse look (avoid conflicts with UI elements)
-    const handleClick = (event: MouseEvent) => {
-      // Only activate pointer lock if clicking on the canvas/background, not UI elements
-      const target = event.target as HTMLElement;
-      if (target.tagName.toLowerCase() === 'canvas' || target === document.body) {
+    // Pointer lock for mouse look - activated by Enter key to avoid click conflicts
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && !isPointerLocked) {
         document.body.requestPointerLock();
+      } else if (event.key === 'Escape' && isPointerLocked) {
+        document.exitPointerLock();
       }
     };
     
@@ -68,12 +68,12 @@ export default function Player() {
       }
     };
     
-    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('pointerlockchange', handlePointerLockChange);
     document.addEventListener('mousemove', handleMouseMove);
     
     return () => {
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
       document.removeEventListener('mousemove', handleMouseMove);
     };

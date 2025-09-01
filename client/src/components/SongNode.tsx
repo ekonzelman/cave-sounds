@@ -189,11 +189,8 @@ export default function SongNode({ position, songData }: SongNodeProps) {
     }
   });
 
-  const handleClick = (event: any) => {
-    // Prevent pointer lock activation when clicking on song nodes
-    event.stopPropagation();
-    // Note: R3F events don't have preventDefault, just stopPropagation
-    
+  const handleClick = () => {
+    // Simple click handler - no event conflicts since pointer lock uses Enter key
     try {
       if (!isDiscovered) {
         // Discover the node
