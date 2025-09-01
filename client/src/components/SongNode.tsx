@@ -56,6 +56,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const isNearby = distanceToPlayer < 3;
   const isDiscovered = songData.discovered;
   const isCurrentlyPlaying = currentSong?.id === songData.id;
+  const { visualizationFilter } = useMusicExplorer();
 
   // Add animations when music is playing
   useFrame((state) => {
@@ -80,7 +81,9 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         const ringScale = 1 + normalizedAudio * 0.2;
         outerRingRef.current.scale.setScalar(ringScale);
         
-        // ANIMATE FREQUENCY BARS with the same audio data
+        // ANIMATE FREQUENCY BARS with different visualization modes
+        const currentTime = state.clock.elapsedTime;
+        
         for (let i = 0; i < frequencyBarRefs.current.length; i++) {
           const barMesh = frequencyBarRefs.current[i];
           if (!barMesh) continue;
@@ -88,9 +91,48 @@ export default function SongNode({ position, songData }: SongNodeProps) {
           const audioValue = frequencyData[i % frequencyData.length] || 0;
           const barNormalizedAudio = audioValue / 255;
           
-          // Scale bars based on frequency data
-          const scaleY = 0.3 + barNormalizedAudio * 3;
-          barMesh.scale.y = scaleY;
+          // Different animations based on visualization mode
+          switch (visualizationFilter) {
+            case 'wave':
+              // Wave motion - bars move in a sine wave pattern
+              const waveOffset = Math.sin((i / 12) * Math.PI * 2 + currentTime * 2) * 0.5;
+              const waveScale = 0.3 + barNormalizedAudio * 2 + Math.abs(waveOffset);
+              barMesh.scale.y = waveScale;
+              barMesh.position.y = waveOffset;
+              break;
+              
+            case 'spiral':
+              // Spiral dance - bars rotate and pulse in a spiral
+              const spiralAngle = (i / 12) * Math.PI * 2 + currentTime;
+              const spiralRadius = 4 + Math.sin(currentTime + i * 0.2) * 0.5;
+              barMesh.position.x = Math.cos(spiralAngle) * spiralRadius;
+              barMesh.position.z = Math.sin(spiralAngle) * spiralRadius;
+              barMesh.scale.y = 0.3 + barNormalizedAudio * 3;
+              barMesh.rotation.y = spiralAngle;
+              break;
+              
+            case 'burst':
+              // Energy burst - bars explode outward with high frequencies
+              const burstIntensity = barNormalizedAudio > 0.6 ? barNormalizedAudio * 2 : 0.3;
+              const burstRadius = 4 + burstIntensity * 2;
+              const burstAngle = (i / 12) * Math.PI * 2;
+              barMesh.position.x = Math.cos(burstAngle) * burstRadius;
+              barMesh.position.z = Math.sin(burstAngle) * burstRadius;
+              barMesh.scale.y = 0.2 + burstIntensity * 4;
+              barMesh.scale.x = barMesh.scale.z = 1 + burstIntensity;
+              break;
+              
+            default: // 'bars'
+              // Standard frequency bars
+              const scaleY = 0.3 + barNormalizedAudio * 3;
+              barMesh.scale.y = scaleY;
+              // Reset position and scale
+              barMesh.position.x = Math.cos((i / 12) * Math.PI * 2) * 4;
+              barMesh.position.z = Math.sin((i / 12) * Math.PI * 2) * 4;
+              barMesh.position.y = 0;
+              barMesh.scale.x = barMesh.scale.z = 1;
+              barMesh.rotation.y = 0;
+          }
         }
       }
     } else {

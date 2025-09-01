@@ -77,16 +77,16 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     return bars;
   }, []);
 
-  // Simplified audio-reactive animations
-  useFrame(() => {
+  // Global frequency bars that move around and avoid player
+  useFrame((state) => {
     if (!audioAnalyzer || !currentSong || isMuted) return;
 
     const frequencyData = audioAnalyzer.getFrequencyData();
     if (!frequencyData) return;
 
-    // Skip particle animations to reduce complexity
+    const currentTime = state.clock.elapsedTime;
     
-    // Update frequency bars with simple, stable animation
+    // Update frequency bars with movement and player avoidance
     for (let i = 0; i < barRefs.current.length; i++) {
       const barMesh = barRefs.current[i];
       if (!barMesh) continue;
@@ -94,7 +94,32 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       const audioValue = frequencyData[i % frequencyData.length] || 0;
       const normalizedAudio = audioValue / 255;
       
-      // Simple scaling based on frequency data
+      // Base movement - slowly rotate around the scene
+      const baseAngle = (i / barCount) * Math.PI * 2 + currentTime * 0.3;
+      const baseRadius = 12;
+      let targetX = Math.cos(baseAngle) * baseRadius;
+      let targetZ = Math.sin(baseAngle) * baseRadius;
+      
+      // Player avoidance - scatter away from player position
+      const playerX = playerPosition.x;
+      const playerZ = playerPosition.z;
+      const distanceToPlayer = Math.sqrt(
+        (targetX - playerX) ** 2 + (targetZ - playerZ) ** 2
+      );
+      
+      // If too close to player, push away
+      if (distanceToPlayer < 8) {
+        const avoidanceStrength = (8 - distanceToPlayer) / 8;
+        const avoidanceAngle = Math.atan2(targetZ - playerZ, targetX - playerX);
+        targetX += Math.cos(avoidanceAngle) * avoidanceStrength * 3;
+        targetZ += Math.sin(avoidanceAngle) * avoidanceStrength * 3;
+      }
+      
+      // Smooth movement towards target position
+      barMesh.position.x += (targetX - barMesh.position.x) * 0.02;
+      barMesh.position.z += (targetZ - barMesh.position.z) * 0.02;
+      
+      // Audio-reactive scaling
       const scaleY = 0.5 + normalizedAudio * 2.5;
       barMesh.scale.y = scaleY;
     }
