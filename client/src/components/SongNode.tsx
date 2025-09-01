@@ -189,10 +189,10 @@ export default function SongNode({ position, songData }: SongNodeProps) {
     }
   });
 
-  const handleClick = (event: React.MouseEvent) => {
+  const handleClick = (event: any) => {
     // Prevent pointer lock activation when clicking on song nodes
     event.stopPropagation();
-    event.preventDefault();
+    // Note: R3F events don't have preventDefault, just stopPropagation
     
     try {
       if (!isDiscovered) {
