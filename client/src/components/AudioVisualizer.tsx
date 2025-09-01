@@ -11,7 +11,7 @@ interface AudioVisualizerProps {
 export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioVisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const particleBufferRef = useRef<THREE.BufferAttribute>(null);
-  const { currentSong, audioAnalyzer, visualizationFilter: activeFilter, playerPosition, songs } = useMusicExplorer();
+  const { currentSong, audioAnalyzer, visualizationFilter: activeFilter, playerPosition, songNodes } = useMusicExplorer();
   const { isMuted } = useAudio();
   
   const particleCount = 200;
@@ -87,11 +87,11 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     const currentTime = state.clock.elapsedTime;
     
     // Find the position of the currently playing song node
-    const currentSongData = songs.find(s => s.id === currentSong.id);
+    const currentSongData = songNodes && songNodes.find ? songNodes.find((s: any) => s.id === currentSong.id) : null;
     const songNodePosition = currentSongData ? {
-      x: currentSongData.x || 0,
-      y: currentSongData.y || 0, 
-      z: currentSongData.z || 0
+      x: currentSongData.position[0] || 0,
+      y: currentSongData.position[1] || 0, 
+      z: currentSongData.position[2] || 0
     } : { x: 0, y: 0, z: 0 };
     
     // Update frequency bars positioned above the song node
@@ -123,9 +123,9 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
   if (!currentSong) return null;
 
   // Position the entire visualizer group above the currently playing song
-  const currentSongData = songs.find(s => s.id === currentSong?.id);
+  const currentSongData = songNodes && songNodes.find ? songNodes.find((s: any) => s.id === currentSong?.id) : null;
   const groupPosition: [number, number, number] = currentSongData ? 
-    [currentSongData.x || 0, (currentSongData.y || 0) + 8, currentSongData.z || 0] : 
+    [currentSongData.position[0] || 0, (currentSongData.position[1] || 0) + 8, currentSongData.position[2] || 0] : 
     [0, 8, 0];
 
   return (
