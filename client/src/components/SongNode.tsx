@@ -56,21 +56,21 @@ export default function SongNode({ position, songData }: SongNodeProps) {
       playSuccess();
       console.log(`Discovered song: ${songData.title}`);
     } else {
-      // Play the song - pass the full songData with position
-      setCurrentSong(songData);
+      // Play the song - pass the full songData 
+      setCurrentSong({ ...songData, position });
       console.log(`Playing song: ${songData.title}`);
     }
   };
 
   const getNodeColor = () => {
-    if (!isDiscovered) return '#333333'; // Hidden/undiscovered
+    if (!isDiscovered) return '#0099ff'; // Undiscovered - bright blue glow
     if (currentSong?.id === songData.id) return '#ff0080'; // Currently playing - bright magenta
     if (hovered) return '#00ffff'; // Hovered - cyan
     return '#ffffff'; // Discovered but not playing - white
   };
 
   const getEmissiveColor = () => {
-    if (!isDiscovered) return '#111111';
+    if (!isDiscovered) return '#0066cc';
     if (currentSong?.id === songData.id) return '#ff0080';
     return '#ffffff';
   };
@@ -84,39 +84,46 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
       >
-        <sphereGeometry args={[0.8, 16, 16]} />
+        <sphereGeometry args={[1.5, 16, 16]} />
         <meshBasicMaterial
           color={getNodeColor()}
           transparent
-          opacity={isDiscovered ? 1 : 0.5}
+          opacity={isDiscovered ? 1 : 0.9}
         />
       </mesh>
 
-      {/* Outer glow ring - fluorescent */}
-      {isDiscovered && (
-        <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
-          <ringGeometry args={[1.2, 1.8, 32]} />
-          <meshBasicMaterial
-            color={getNodeColor()}
-            transparent
-            opacity={0.6}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
+      {/* Outer glow ring - always visible */}
+      <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+        <ringGeometry args={[2, 3.5, 32]} />
+        <meshBasicMaterial
+          color={getNodeColor()}
+          transparent
+          opacity={isDiscovered ? 0.8 : 0.4}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
 
-      {/* Particle system around discovered nodes */}
-      {isDiscovered && (
-        <points>
-          <sphereGeometry args={[3, 64, 64]} />
-          <pointsMaterial
-            color={getNodeColor()}
-            size={0.08}
-            transparent
-            opacity={0.8}
-            blending={THREE.AdditiveBlending}
-          />
-        </points>
+      {/* Particle system around all nodes */}
+      <points>
+        <sphereGeometry args={[4, 64, 64]} />
+        <pointsMaterial
+          color={getNodeColor()}
+          size={0.12}
+          transparent
+          opacity={isDiscovered ? 0.8 : 0.5}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      
+      {/* Extra bright beacon for undiscovered nodes */}
+      {!isDiscovered && (
+        <pointLight
+          position={[0, 0, 0]}
+          intensity={8}
+          distance={15}
+          color={getNodeColor()}
+        />
       )}
 
       {/* Song title text */}

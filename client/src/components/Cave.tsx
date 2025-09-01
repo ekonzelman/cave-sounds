@@ -14,6 +14,29 @@ export default function Cave() {
   const handleClick = () => {
     setRevealedLayers(prev => Math.min(prev + 1, 5));
   };
+  
+  // Cave atmosphere lighting
+  const caveAmbientLight = useMemo(() => {
+    return (
+      <>
+        {/* Warm ambient cave lighting */}
+        <ambientLight intensity={0.1} color="#2c1810" />
+        {/* Directional light from cave entrance */}
+        <directionalLight
+          position={[10, 20, 10]}
+          intensity={0.3}
+          color="#4a3728"
+        />
+        {/* Underground mineral glow */}
+        <pointLight
+          position={[0, -5, 0]}
+          intensity={0.5}
+          distance={50}
+          color="#1a5490"
+        />
+      </>
+    );
+  }, []);
 
   // Generate point cloud cave layers
   const caveLayers = useMemo(() => {
@@ -107,6 +130,9 @@ export default function Cave() {
 
   return (
     <group ref={caveRef} onClick={handleClick}>
+      {/* Cave atmosphere lighting */}
+      {caveAmbientLight}
+      
       {/* Point cloud cave layers */}
       {caveLayers.slice(0, revealedLayers).map((layerPoints, layerIndex) => (
         <points key={`layer-${layerIndex}`}>
@@ -162,27 +188,186 @@ export default function Cave() {
         />
       ))}
 
-      {/* Fluorescent stalactites/stalagmites */}
-      {[...Array(20)].map((_, i) => {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 10 + Math.random() * 25;
+      {/* Realistic Stalactites - hanging from ceiling */}
+      {[...Array(30)].map((_, i) => {
+        const angle = (i / 30) * Math.PI * 2 + Math.random() * 0.5;
+        const radius = 15 + Math.random() * 30;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const isUp = Math.random() > 0.5;
+        const height = 2 + Math.random() * 8;
         
         return (
-          <mesh
-            key={`stalactite-${i}`}
-            position={[x, isUp ? 12 : -1, z]}
-            rotation={isUp ? [0, 0, 0] : [Math.PI, 0, 0]}
-          >
-            <coneGeometry args={[0.2, 3 + Math.random() * 4, 8]} />
-            <meshBasicMaterial
-              color={`hsl(${Math.random() * 360}, 80%, 60%)`}
-              transparent
-              opacity={0.8}
+          <group key={`stalactite-${i}`} position={[x, 15, z]}>
+            {/* Main stalactite body */}
+            <mesh>
+              <coneGeometry args={[0.3 + Math.random() * 0.4, height, 8]} />
+              <meshBasicMaterial
+                color="#e6d7c3"
+                transparent
+                opacity={0.9}
+              />
+            </mesh>
+            {/* Mineral deposits */}
+            <mesh position={[0, -height/2, 0]}>
+              <sphereGeometry args={[0.15, 8, 8]} />
+              <meshBasicMaterial
+                color={`hsl(${180 + Math.random() * 60}, 70%, 70%)`}
+                transparent
+                opacity={0.8}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+      
+      {/* Realistic Stalagmites - rising from floor */}
+      {[...Array(25)].map((_, i) => {
+        const angle = (i / 25) * Math.PI * 2 + Math.random() * 0.3;
+        const radius = 12 + Math.random() * 35;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const height = 1 + Math.random() * 6;
+        
+        return (
+          <group key={`stalagmite-${i}`} position={[x, -2, z]}>
+            {/* Main stalagmite body */}
+            <mesh>
+              <coneGeometry args={[0.4 + Math.random() * 0.5, height, 8]} />
+              <meshBasicMaterial
+                color="#d4c4a0"
+                transparent
+                opacity={0.9}
+              />
+            </mesh>
+            {/* Colorful mineral veins */}
+            <mesh position={[0, height/2, 0]} scale={[1.1, 0.1, 1.1]}>
+              <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
+              <meshBasicMaterial
+                color={`hsl(${Math.random() * 360}, 80%, 60%)`}
+                transparent
+                opacity={0.7}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+      
+      {/* Flowstone formations - bacon-like layered structures */}
+      {[...Array(8)].map((_, i) => {
+        const angle = (i / 8) * Math.PI * 2;
+        const radius = 20 + Math.random() * 15;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        
+        return (
+          <group key={`flowstone-${i}`} position={[x, 5 + Math.random() * 5, z]}>
+            {/* Multiple layers of flowstone */}
+            {[...Array(5)].map((_, layer) => (
+              <mesh
+                key={layer}
+                position={[0, -layer * 0.3, 0]}
+                rotation={[0, Math.random() * 0.3, 0]}
+                scale={[2 + layer * 0.2, 0.1, 1.5 + layer * 0.1]}
+              >
+                <cylinderGeometry args={[1, 1.2, 0.2, 16]} />
+                <meshBasicMaterial
+                  color={`hsl(${20 + layer * 10}, 60%, ${60 + layer * 5}%)`}
+                  transparent
+                  opacity={0.8}
+                />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+      
+      {/* Aragonite crystal formations - branching structures */}
+      {[...Array(12)].map((_, i) => {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 25 + Math.random() * 20;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        
+        return (
+          <group key={`aragonite-${i}`} position={[x, -1 + Math.random() * 8, z]}>
+            {/* Main crystal trunk */}
+            <mesh>
+              <cylinderGeometry args={[0.1, 0.2, 2, 6]} />
+              <meshBasicMaterial
+                color="#e8f4f8"
+                transparent
+                opacity={0.9}
+              />
+            </mesh>
+            {/* Crystal branches */}
+            {[...Array(8)].map((_, branch) => {
+              const branchAngle = (branch / 8) * Math.PI * 2;
+              const branchX = Math.cos(branchAngle) * 0.8;
+              const branchZ = Math.sin(branchAngle) * 0.8;
+              
+              return (
+                <mesh
+                  key={branch}
+                  position={[branchX, 0.5 + Math.random() * 1, branchZ]}
+                  rotation={[Math.random() * 0.5, branchAngle, 0.3]}
+                >
+                  <cylinderGeometry args={[0.05, 0.1, 1 + Math.random() * 0.5, 6]} />
+                  <meshBasicMaterial
+                    color={`hsl(${180 + Math.random() * 40}, 50%, 80%)`}
+                    transparent
+                    opacity={0.8}
+                  />
+                </mesh>
+              );
+            })}
+            {/* Crystal tips with glow */}
+            <pointLight
+              position={[0, 1.5, 0]}
+              intensity={2}
+              distance={8}
+              color="#4dd0e1"
             />
-          </mesh>
+          </group>
+        );
+      })}
+      
+      {/* Conulite formations - circular spiral patterns */}
+      {[...Array(6)].map((_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        const radius = 30 + Math.random() * 10;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        
+        return (
+          <group key={`conulite-${i}`} position={[x, 3 + Math.random() * 4, z]}>
+            {/* Spiral rings */}
+            {[...Array(12)].map((_, ring) => {
+              const ringRadius = 0.3 + ring * 0.15;
+              const ringHeight = ring * 0.1;
+              
+              return (
+                <mesh
+                  key={ring}
+                  position={[0, ringHeight, 0]}
+                  rotation={[0, ring * 0.3, 0]}
+                >
+                  <torusGeometry args={[ringRadius, 0.03, 4, 16]} />
+                  <meshBasicMaterial
+                    color={`hsl(${40 + ring * 5}, 70%, 65%)`}
+                    transparent
+                    opacity={0.8 - ring * 0.05}
+                  />
+                </mesh>
+              );
+            })}
+            {/* Center glow */}
+            <pointLight
+              position={[0, 0.6, 0]}
+              intensity={1.5}
+              distance={6}
+              color="#ffa726"
+            />
+          </group>
         );
       })}
       

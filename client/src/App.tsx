@@ -89,7 +89,7 @@ function App() {
             <color attach="background" args={["#000000"]} />
             
             {/* Minimal lighting for point cloud effect */}
-            <ambientLight intensity={0.2} color="#ffffff" />
+            <ambientLight intensity={0.05} color="#1a1a2e" />
             <pointLight position={[0, 10, 0]} intensity={1} color="#00ffff" distance={100} />
             <pointLight position={[20, 5, 20]} intensity={0.8} color="#ff00ff" distance={80} />
             <pointLight position={[-20, 5, -20]} intensity={0.8} color="#ffff00" distance={80} />
