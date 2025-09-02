@@ -28,25 +28,18 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Ultra-safe camera system with BOTH horizontal and vertical limits
-  const yaw = useRef(0);   // Horizontal rotation (left/right) - LIMITED to prevent spinning
-  const pitch = useRef(0); // Vertical rotation (up/down) - LIMITED to prevent flipping
+  // Full freedom camera system with complete 360° horizontal and 180° vertical rotation
+  const yaw = useRef(0);   // Horizontal rotation (left/right) - UNLIMITED 360° rotation
+  const pitch = useRef(0); // Vertical rotation (up/down) - FULL 180° range (straight up to straight down)
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  // SMOOTH LIMITS - with gradual resistance near boundaries
-  const SOFT_PITCH_LIMIT = Math.PI / 5;    // 36 degrees (comfortable range)
-  const HARD_PITCH_LIMIT = Math.PI / 4;    // 45 degrees (absolute max)
-  const SOFT_YAW_LIMIT = Math.PI * 0.6;    // 108 degrees (comfortable range)
-  const HARD_YAW_LIMIT = Math.PI * 0.75;   // 135 degrees (absolute max)
+  // FULL ROTATION LIMITS - Complete freedom of movement
+  const MAX_PITCH = Math.PI / 2;    // 90 degrees - straight up
+  const MIN_PITCH = -Math.PI / 2;   // -90 degrees - straight down
+  // No yaw limits - full 360° horizontal rotation allowed
   
-  // Reference object positions for orientation checking
-  const LIGHT_SOURCE_POS = new THREE.Vector3(0, 50, 0);  // Always above
-  const BLACK_HOLE_POS = new THREE.Vector3(0, -50, 0);   // Always below
-  
-  // Smooth validation state
+  // Debug state
   const debugCount = useRef(0);
-  const validationCount = useRef(0);
-  const lastResetTime = useRef(0);
 
   // Set initial camera position and setup pointer lock
   useEffect(() => {
@@ -55,7 +48,7 @@ export default function Player() {
     // Initialize camera angles from current orientation
     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
     yaw.current = euler.y;
-    pitch.current = Math.max(-HARD_PITCH_LIMIT, Math.min(HARD_PITCH_LIMIT, euler.x)); // Clamp initial pitch
+    pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, euler.x)); // Clamp initial pitch
     
     // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -92,52 +85,24 @@ export default function Player() {
           const prevYaw = yaw.current;
           const prevPitch = pitch.current;
           
-          // UPDATE YAW (horizontal rotation) - SMOOTH LIMITING
-          let newYaw = yaw.current - mouseX;
+          // UPDATE YAW (horizontal rotation) - NO LIMITS, full 360°
+          yaw.current -= mouseX;
           
-          // Apply smooth resistance as we approach limits
-          if (Math.abs(newYaw) > SOFT_YAW_LIMIT) {
-            const overLimit = Math.abs(newYaw) - SOFT_YAW_LIMIT;
-            const resistance = Math.min(overLimit / (HARD_YAW_LIMIT - SOFT_YAW_LIMIT), 1);
-            const dampening = 1 - (resistance * 0.8); // Reduce movement by up to 80%
-            newYaw = yaw.current - (mouseX * dampening);
-          }
+          // UPDATE PITCH (vertical rotation) - 180° range (straight up to straight down)
+          pitch.current -= mouseY;
           
-          // Hard clamp at absolute limit
-          newYaw = Math.max(-HARD_YAW_LIMIT, Math.min(HARD_YAW_LIMIT, newYaw));
-          yaw.current = newYaw;
+          // Clamp pitch to prevent over-rotation beyond straight up/down
+          pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
           
-          // UPDATE PITCH (vertical rotation) - SMOOTH LIMITING
-          let newPitch = pitch.current - mouseY;
-          
-          // Apply smooth resistance as we approach limits  
-          if (Math.abs(newPitch) > SOFT_PITCH_LIMIT) {
-            const overLimit = Math.abs(newPitch) - SOFT_PITCH_LIMIT;
-            const resistance = Math.min(overLimit / (HARD_PITCH_LIMIT - SOFT_PITCH_LIMIT), 1);
-            const dampening = 1 - (resistance * 0.9); // Stronger dampening for pitch
-            newPitch = pitch.current - (mouseY * dampening);
-          }
-          
-          // Hard clamp at absolute limit
-          newPitch = Math.max(-HARD_PITCH_LIMIT, Math.min(HARD_PITCH_LIMIT, newPitch));
-          pitch.current = newPitch;
-          
-          // COMPREHENSIVE DEBUGGING - Log every 30 frames
+          // SIMPLE DEBUGGING - Log every 60 frames
           debugCount.current++;
-          if (debugCount.current % 30 === 0) {
-            console.log('CAMERA DEBUG:', {
-              mouseInput: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) },
-              angles: { 
-                yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°',
-                pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°'
-              },
-              limits: {
-                yawRange: `${(-HARD_YAW_LIMIT * 180 / Math.PI).toFixed(0)}° to ${(HARD_YAW_LIMIT * 180 / Math.PI).toFixed(0)}°`,
-                pitchRange: `${(-HARD_PITCH_LIMIT * 180 / Math.PI).toFixed(0)}° to ${(HARD_PITCH_LIMIT * 180 / Math.PI).toFixed(0)}°`
-              },
-              clamped: {
-                yaw: prevYaw !== yaw.current,
-                pitch: prevPitch !== pitch.current
+          if (debugCount.current % 60 === 0) {
+            console.log('Camera rotation:', {
+              yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°', 
+              pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°',
+              ranges: {
+                yaw: 'unlimited 360°',
+                pitch: `${(MIN_PITCH * 180 / Math.PI).toFixed(0)}° to ${(MAX_PITCH * 180 / Math.PI).toFixed(0)}°`
               }
             });
           }
@@ -146,53 +111,6 @@ export default function Player() {
           const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
           camera.quaternion.setFromEuler(euler);
           
-          // SMOOTH REFERENCE VALIDATION - validate every 10 frames to reduce jitter
-          validationCount.current++;
-          if (validationCount.current % 10 === 0) {
-            
-            // Project reference objects to screen space
-            const lightSourceScreen = LIGHT_SOURCE_POS.clone().project(camera);
-            const blackHoleScreen = BLACK_HOLE_POS.clone().project(camera);
-            
-            // More tolerant validation with margin for smooth movement
-            const MARGIN = 0.3; // Allow 30% margin before correction
-            const lightIsAbove = lightSourceScreen.y > -MARGIN;  // Allow some downward drift
-            const blackIsBelow = blackHoleScreen.y < MARGIN;     // Allow some upward drift
-            
-            // Only trigger correction if we're WAY off AND enough time has passed
-            const currentTime = performance.now();
-            const timeSinceLastReset = currentTime - lastResetTime.current;
-            
-            if ((!lightIsAbove || !blackIsBelow) && timeSinceLastReset > 1000) { // Wait 1 second between resets
-              
-              // GENTLE CORRECTION instead of hard reset
-              const targetPitch = pitch.current * 0.7; // Gradually move toward center
-              const targetYaw = yaw.current * 0.7;     // Gradually move toward center
-              
-              pitch.current = targetPitch;
-              yaw.current = targetYaw;
-              
-              lastResetTime.current = currentTime;
-              
-              if (debugCount.current % 30 === 0) {
-                console.log('Gentle orientation correction applied', {
-                  lightSource: { y: lightSourceScreen.y.toFixed(3), isAbove: lightIsAbove },
-                  blackHole: { y: blackHoleScreen.y.toFixed(3), isBelow: blackIsBelow },
-                  correction: { pitch: targetPitch.toFixed(3), yaw: targetYaw.toFixed(3) }
-                });
-              }
-            }
-          }
-          
-          // Gentle camera up vector safety check
-          const cameraUp = new THREE.Vector3(0, 1, 0);
-          cameraUp.applyQuaternion(camera.quaternion);
-          
-          if (cameraUp.y < 0.4) { // Only if severely tilted
-            const correctionStrength = 0.05; // Very gentle correction
-            pitch.current *= (1 - correctionStrength);
-            yaw.current *= (1 - correctionStrength);
-          }
           
         } catch (error) {
           console.error('Mouse look error:', error);
