@@ -75,18 +75,32 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          // ULTRA-SAFE camera system with comprehensive debugging
+          // REFINED camera system with inversion debugging
           const sensitivity = 0.002;
           
-          const mouseX = event.movementX * sensitivity;
-          const mouseY = event.movementY * sensitivity;
+          // Cap mouse deltas to prevent extreme jumps that cause inversion
+          const maxDelta = 0.05; // Limit to about 3 degrees per frame
+          const rawMouseX = event.movementX * sensitivity;
+          const rawMouseY = event.movementY * sensitivity;
+          
+          const mouseX = Math.max(-maxDelta, Math.min(maxDelta, rawMouseX));
+          const mouseY = Math.max(-maxDelta, Math.min(maxDelta, rawMouseY));
           
           // Store previous values for debugging
           const prevYaw = yaw.current;
           const prevPitch = pitch.current;
           
-          // UPDATE YAW (horizontal rotation) - NO LIMITS, full 360°
+          // UPDATE YAW (horizontal rotation) - with normalization to prevent accumulation issues
           yaw.current -= mouseX;
+          
+          // NORMALIZE YAW to keep it in reasonable range (-π to π)
+          // This prevents precision issues from very large accumulated values
+          while (yaw.current > Math.PI) {
+            yaw.current -= 2 * Math.PI;
+          }
+          while (yaw.current < -Math.PI) {
+            yaw.current += 2 * Math.PI;
+          }
           
           // UPDATE PITCH (vertical rotation) - 180° range (straight up to straight down)
           pitch.current -= mouseY;
@@ -94,16 +108,27 @@ export default function Player() {
           // Clamp pitch to prevent over-rotation beyond straight up/down
           pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
           
-          // SIMPLE DEBUGGING - Log every 60 frames
+          // INVERSION DEBUGGING - Enhanced logging to catch issues
           debugCount.current++;
-          if (debugCount.current % 60 === 0) {
-            console.log('Camera rotation:', {
-              yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°', 
-              pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°',
-              ranges: {
-                yaw: 'unlimited 360°',
-                pitch: `${(MIN_PITCH * 180 / Math.PI).toFixed(0)}° to ${(MAX_PITCH * 180 / Math.PI).toFixed(0)}°`
-              }
+          
+          // Log extreme movements or potential inversions
+          const largeDelta = Math.abs(rawMouseX) > 0.01 || Math.abs(rawMouseY) > 0.01;
+          const yawChange = Math.abs(yaw.current - prevYaw);
+          const pitchChange = Math.abs(pitch.current - prevPitch);
+          
+          if (largeDelta || debugCount.current % 120 === 0) {
+            console.log('Camera debug:', {
+              mouseRaw: { x: rawMouseX.toFixed(4), y: rawMouseY.toFixed(4) },
+              mouseCapped: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) },
+              angles: { 
+                yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°', 
+                pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°'
+              },
+              changes: {
+                yaw: (yawChange * 180 / Math.PI).toFixed(1) + '°',
+                pitch: (pitchChange * 180 / Math.PI).toFixed(1) + '°'
+              },
+              normalized: yaw.current !== (prevYaw - mouseX)
             });
           }
           
