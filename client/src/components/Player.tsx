@@ -173,7 +173,7 @@ export default function Player() {
     }
 
     const keys = getKeys();
-    const moveSpeed = 800; // MASSIVE SCALE: 100x faster movement for huge cave
+    const moveSpeed = 8;
     const dampening = 0.9;
 
     // Reset direction

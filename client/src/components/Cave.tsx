@@ -166,15 +166,15 @@ export default function Cave() {
         <ambientLight intensity={currentSong ? 0.3 : 0.1} color={audioReactiveColors.ambient} />
         {/* Audio-reactive directional light from cave entrance */}
         <directionalLight
-          position={[1000, 2000, 1000]}
+          position={[10, 20, 10]}
           intensity={currentSong ? 0.8 : 0.3}
           color={audioReactiveColors.directional}
         />
         {/* Audio-reactive underground mineral glow */}
         <pointLight
-          position={[0, -500, 0]}
+          position={[0, -5, 0]}
           intensity={currentSong ? 2 : 0.5}
-          distance={currentSong ? 10000 : 5000}
+          distance={currentSong ? 100 : 50}
           color={audioReactiveColors.mineral}
         />
       </>
@@ -193,20 +193,20 @@ export default function Cave() {
       for (let i = 0; i < particleCount; i++) {
         // Generate stable cave-like structure 
         const angle = (i / particleCount) * Math.PI * 4;
-        const radius = 1500 + (layerIndex * 1000);
-        const height = (i % 1500);
+        const radius = 15 + (layerIndex * 10);
+        const height = (i % 15);
         
         // Create stable organic cave shapes
         const noise = Math.sin(angle * 3) * Math.cos(height * 0.1) * 1;
         const caveRadius = radius + noise;
         
         const x = Math.cos(angle) * caveRadius;
-        const y = height - 200 + Math.sin(i * 0.01) * 100; // Massive scale
+        const y = height - 2 + Math.sin(i * 0.01) * 1; // Reduced noise
         const z = Math.sin(angle) * caveRadius;
         
         // Add stable cave features
         if (i % 5 === 0) {
-          const stalactiteHeight = i % 2 === 0 ? 1200 : -200;
+          const stalactiteHeight = i % 2 === 0 ? 12 : -2;
           layerPoints.push(x, stalactiteHeight, z);
         } else {
           layerPoints.push(x, y, z);
@@ -226,9 +226,9 @@ export default function Cave() {
     const colors = new Float32Array(particleCount * 3);
     
     for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = ((i % 100) - 50) * 300;
-      positions[i * 3 + 1] = (i % 2000);
-      positions[i * 3 + 2] = ((i % 100) - 50) * 300;
+      positions[i * 3] = ((i % 100) - 50) * 3;
+      positions[i * 3 + 1] = (i % 20);
+      positions[i * 3 + 2] = ((i % 100) - 50) * 3;
       
       // Fluorescent colors
       const colorChoice = i % 4;
@@ -374,13 +374,13 @@ export default function Cave() {
       {/* Realistic Stalactites - hanging from ceiling */}
       {[...Array(15)].map((_, i) => {
         const angle = (i / 15) * Math.PI * 2;
-        const radius = 2500;
+        const radius = 25;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         const height = 4;
         
         return (
-          <group key={`stalactite-${i}`} position={[x, 1500, z]}>
+          <group key={`stalactite-${i}`} position={[x, 15, z]}>
             {/* Main stalactite body */}
             <mesh>
               <coneGeometry args={[0.5, height, 8]} />
@@ -406,13 +406,13 @@ export default function Cave() {
       {/* Realistic Stalagmites - rising from floor */}
       {[...Array(12)].map((_, i) => {
         const angle = (i / 12) * Math.PI * 2;
-        const radius = 3000;
+        const radius = 30;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         const height = 3;
         
         return (
-          <group key={`stalagmite-${i}`} position={[x, -200, z]}>
+          <group key={`stalagmite-${i}`} position={[x, -2, z]}>
             {/* Main stalagmite body */}
             <mesh>
               <coneGeometry args={[0.6, height, 8]} />
@@ -438,12 +438,12 @@ export default function Cave() {
       {/* Flowstone formations - bacon-like layered structures */}
       {[...Array(8)].map((_, i) => {
         const angle = (i / 8) * Math.PI * 2;
-        const radius = 2500;
+        const radius = 25;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`flowstone-${i}`} position={[x, 700, z]}>
+          <group key={`flowstone-${i}`} position={[x, 7, z]}>
             {/* Multiple layers of flowstone */}
             {[...Array(5)].map((_, layer) => (
               <mesh
@@ -467,12 +467,12 @@ export default function Cave() {
       {/* Aragonite crystal formations - branching structures */}
       {[...Array(6)].map((_, i) => {
         const angle = (i / 6) * Math.PI * 2;
-        const radius = 3500;
+        const radius = 35;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`aragonite-${i}`} position={[x, 400, z]}>
+          <group key={`aragonite-${i}`} position={[x, 4, z]}>
             {/* Main crystal trunk */}
             <mesh>
               <cylinderGeometry args={[0.1, 0.2, 2, 6]} />
@@ -517,12 +517,12 @@ export default function Cave() {
       {/* Conulite formations - circular spiral patterns */}
       {[...Array(6)].map((_, i) => {
         const angle = (i / 6) * Math.PI * 2;
-        const radius = 3500;
+        const radius = 35;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`conulite-${i}`} position={[x, 500, z]}>
+          <group key={`conulite-${i}`} position={[x, 5, z]}>
             {/* Spiral rings */}
             {[...Array(6)].map((_, ring) => {
               const ringRadius = 0.3 + ring * 0.15;
@@ -564,7 +564,7 @@ export default function Cave() {
       
       {/* ORIENTATION REFERENCE OBJECTS */}
       {/* AUDIO-REACTIVE Light source at the TOP - bright colors pulse with music */}
-      <group position={[0, 5000, 0]}>
+      <group position={[0, 50, 0]}>
         <mesh>
           <sphereGeometry args={[2, 16, 16]} />
           <meshStandardMaterial 
@@ -607,7 +607,7 @@ export default function Cave() {
       </group>
       
       {/* AUDIO-REACTIVE Black hole at the BOTTOM - dark colors pulse with music */}
-      <group position={[0, -5000, 0]}>
+      <group position={[0, -50, 0]}>
         <mesh>
           <sphereGeometry args={[2.5, 16, 16]} />
           <meshStandardMaterial color={referenceObjectColors.blackHole.core} emissive={referenceObjectColors.blackHole.core} />
