@@ -483,6 +483,49 @@ export default function Cave() {
           <meshBasicMaterial transparent opacity={0} />
         </mesh>
       )}
+      
+      {/* ORIENTATION REFERENCE OBJECTS */}
+      {/* Light source at the TOP - always visible as "ceiling" reference */}
+      <group position={[0, 50, 0]}>
+        <mesh>
+          <sphereGeometry args={[2, 16, 16]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffff88" emissiveIntensity={0.8} />
+        </mesh>
+        <pointLight
+          intensity={3}
+          distance={100}
+          color="#ffff88"
+        />
+        {/* Light rays effect */}
+        {[...Array(8)].map((_, i) => {
+          const angle = (i / 8) * Math.PI * 2;
+          return (
+            <mesh key={i} rotation={[0, angle, 0]} position={[Math.cos(angle) * 3, 0, Math.sin(angle) * 3]}>
+              <cylinderGeometry args={[0.05, 0.05, 6]} />
+              <meshBasicMaterial color="#ffff88" transparent opacity={0.4} />
+            </mesh>
+          );
+        })}
+      </group>
+      
+      {/* Black hole at the BOTTOM - always visible as "floor" reference */}
+      <group position={[0, -50, 0]}>
+        <mesh>
+          <sphereGeometry args={[2.5, 16, 16]} />
+          <meshStandardMaterial color="#000000" emissive="#000000" />
+        </mesh>
+        {/* Accretion disk effect */}
+        {[...Array(3)].map((_, i) => (
+          <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[3 + i * 1.5, 0.1, 4, 32]} />
+            <meshBasicMaterial 
+              color={`hsl(${280 + i * 20}, 80%, ${30 - i * 5}%)`} 
+              transparent 
+              opacity={0.6 - i * 0.1} 
+            />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }

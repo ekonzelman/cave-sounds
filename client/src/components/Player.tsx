@@ -33,11 +33,15 @@ export default function Player() {
   const pitch = useRef(0); // Vertical rotation (up/down) - LIMITED to prevent flipping
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  // STRICT LIMITS - both horizontal and vertical to prevent ANY flipping
-  const MAX_PITCH = Math.PI / 4;    // 45 degrees up (safer than 60)
-  const MIN_PITCH = -Math.PI / 4;   // 45 degrees down (safer than 60)
-  const MAX_YAW = Math.PI * 0.75;   // 135 degrees left (3/4 turn)
-  const MIN_YAW = -Math.PI * 0.75;  // 135 degrees right (3/4 turn)
+  // ULTRA-STRICT LIMITS - much tighter to prevent edge case flipping
+  const MAX_PITCH = Math.PI / 6;    // 30 degrees up (tighter!)
+  const MIN_PITCH = -Math.PI / 6;   // 30 degrees down (tighter!)
+  const MAX_YAW = Math.PI * 0.5;    // 90 degrees left (half turn)
+  const MIN_YAW = -Math.PI * 0.5;   // 90 degrees right (half turn)
+  
+  // Reference object positions for orientation checking
+  const LIGHT_SOURCE_POS = new THREE.Vector3(0, 50, 0);  // Always above
+  const BLACK_HOLE_POS = new THREE.Vector3(0, -50, 0);   // Always below
   
   // Debug state
   const debugCount = useRef(0);
@@ -124,26 +128,45 @@ export default function Player() {
           const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
           camera.quaternion.setFromEuler(euler);
           
-          // TRIPLE VERIFICATION: Check camera orientation
-          const cameraUp = new THREE.Vector3(0, 1, 0);
-          cameraUp.applyQuaternion(camera.quaternion);
-          const cameraForward = new THREE.Vector3(0, 0, -1);
-          cameraForward.applyQuaternion(camera.quaternion);
+          // REFERENCE OBJECT VALIDATION - the ultimate flip prevention!
+          // Project reference objects to screen space to check their positions
+          const lightSourceScreen = LIGHT_SOURCE_POS.clone().project(camera);
+          const blackHoleScreen = BLACK_HOLE_POS.clone().project(camera);
           
-          // Emergency detection and correction
-          if (cameraUp.y < 0.5) { // Camera is getting close to upside-down
-            console.error('CAMERA FLIP DETECTED!', {
-              cameraUp: { x: cameraUp.x.toFixed(3), y: cameraUp.y.toFixed(3), z: cameraUp.z.toFixed(3) },
-              cameraForward: { x: cameraForward.x.toFixed(3), y: cameraForward.y.toFixed(3), z: cameraForward.z.toFixed(3) },
-              angles: { yaw: yaw.current, pitch: pitch.current },
-              euler: { x: euler.x, y: euler.y, z: euler.z }
+          // Check if light source is above center and black hole is below center
+          const lightIsAbove = lightSourceScreen.y > 0;  // In screen space, +Y is up
+          const blackIsBelow = blackHoleScreen.y < 0;    // In screen space, -Y is down
+          
+          // CRITICAL CHECK: If reference objects are in wrong positions, FORCE RESET
+          if (!lightIsAbove || !blackIsBelow) {
+            console.error('ORIENTATION FAILURE - Reference objects in wrong positions!', {
+              lightSource: { 
+                screen: { x: lightSourceScreen.x.toFixed(3), y: lightSourceScreen.y.toFixed(3) }, 
+                isAbove: lightIsAbove 
+              },
+              blackHole: { 
+                screen: { x: blackHoleScreen.x.toFixed(3), y: blackHoleScreen.y.toFixed(3) }, 
+                isBelow: blackIsBelow 
+              },
+              currentAngles: { yaw: yaw.current, pitch: pitch.current }
             });
             
-            // EMERGENCY RESET - force to safe position
+            // IMMEDIATE EMERGENCY RESET
             pitch.current = 0;
             yaw.current = 0;
             camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
-            console.log('Emergency reset applied');
+            console.log('EMERGENCY RESET: Camera forced to safe position to maintain orientation');
+          }
+          
+          // Additional safety check - camera up vector
+          const cameraUp = new THREE.Vector3(0, 1, 0);
+          cameraUp.applyQuaternion(camera.quaternion);
+          
+          if (cameraUp.y < 0.7) { // Camera tilted too far
+            console.warn('Camera tilt detected, correcting...', { cameraUpY: cameraUp.y });
+            pitch.current = 0;
+            yaw.current = 0;
+            camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
           }
           
         } catch (error) {
