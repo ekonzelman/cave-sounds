@@ -80,7 +80,7 @@ export default function Player() {
       if (document.pointerLockElement === document.body) {
         try {
           // SMOOTH camera system - tuned velocity with easing
-          const sensitivity = 0.0015; // BALANCED: Sweet spot between responsiveness and smoothness
+          const sensitivity = 0.00175; // FINE-TUNED: Slightly more responsive while maintaining smoothness
           
           // Cap mouse deltas to prevent extreme jumps
           const maxDelta = 0.025; // Also reduced for smoother movement
