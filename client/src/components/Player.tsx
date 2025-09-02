@@ -90,17 +90,8 @@ export default function Player() {
           const prevYaw = yaw.current;
           const prevPitch = pitch.current;
           
-          // UPDATE YAW (horizontal rotation) - with normalization to prevent accumulation issues
+          // UPDATE YAW (horizontal rotation) - accumulate without normalization
           yaw.current -= mouseX;
-          
-          // NORMALIZE YAW to keep it in reasonable range (-π to π)
-          // This prevents precision issues from very large accumulated values
-          while (yaw.current > Math.PI) {
-            yaw.current -= 2 * Math.PI;
-          }
-          while (yaw.current < -Math.PI) {
-            yaw.current += 2 * Math.PI;
-          }
           
           // UPDATE PITCH (vertical rotation) - 180° range (straight up to straight down)
           pitch.current -= mouseY;
@@ -108,33 +99,28 @@ export default function Player() {
           // Clamp pitch to prevent over-rotation beyond straight up/down
           pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
           
-          // INVERSION DEBUGGING - Enhanced logging to catch issues
+          // ROBUST ROTATION APPLICATION using separate quaternions to avoid gimbal lock
+          // Create separate quaternions for yaw and pitch then combine them
+          const yawQuaternion = new THREE.Quaternion();
+          yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
+          
+          const pitchQuaternion = new THREE.Quaternion();
+          pitchQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch.current);
+          
+          // Combine rotations: apply yaw first (around world Y), then pitch (around local X)
+          camera.quaternion.copy(yawQuaternion).multiply(pitchQuaternion);
+          
+          // SIMPLE DEBUGGING - Log every 120 frames to check for issues
           debugCount.current++;
-          
-          // Log extreme movements or potential inversions
-          const largeDelta = Math.abs(rawMouseX) > 0.01 || Math.abs(rawMouseY) > 0.01;
-          const yawChange = Math.abs(yaw.current - prevYaw);
-          const pitchChange = Math.abs(pitch.current - prevPitch);
-          
-          if (largeDelta || debugCount.current % 120 === 0) {
-            console.log('Camera debug:', {
-              mouseRaw: { x: rawMouseX.toFixed(4), y: rawMouseY.toFixed(4) },
-              mouseCapped: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) },
+          if (debugCount.current % 120 === 0) {
+            console.log('Quaternion camera:', {
               angles: { 
                 yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°', 
                 pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°'
               },
-              changes: {
-                yaw: (yawChange * 180 / Math.PI).toFixed(1) + '°',
-                pitch: (pitchChange * 180 / Math.PI).toFixed(1) + '°'
-              },
-              normalized: yaw.current !== (prevYaw - mouseX)
+              mouse: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) }
             });
           }
-          
-          // APPLY ROTATIONS using safe Euler angles
-          const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
-          camera.quaternion.setFromEuler(euler);
           
           
         } catch (error) {
