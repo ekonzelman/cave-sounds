@@ -34,6 +34,9 @@ export default function Player() {
   const worldUp = useRef(new THREE.Vector3(0, 1, 0));        // World up direction (floor normal)
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
+  // Track horizontal rotation for limits
+  const horizontalAngle = useRef(0); // Track total horizontal rotation
+  
   // Cave floor level for anchoring
   const FLOOR_LEVEL = -10;
 
@@ -52,6 +55,9 @@ export default function Player() {
     // Ensure we're grounded to the floor
     cameraForward.current.y = 0; // Project forward onto floor plane
     cameraForward.current.normalize();
+    
+    // Initialize horizontal angle tracking
+    horizontalAngle.current = 0;
     
     // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -75,15 +81,36 @@ export default function Player() {
           const mouseX = event.movementX * sensitivity;
           const mouseY = event.movementY * sensitivity;
           
-          // HORIZONTAL ROTATION (left/right) - rotate around world up axis
+          // HORIZONTAL ROTATION (left/right) - rotate around world up axis with limits
           if (Math.abs(mouseX) > 0.001) {
-            const rotationMatrix = new THREE.Matrix4();
-            rotationMatrix.makeRotationAxis(worldUp.current, -mouseX);
+            // Calculate target horizontal angle
+            const targetAngle = horizontalAngle.current - mouseX;
             
-            // Rotate forward and right vectors around world up
-            cameraForward.current.applyMatrix4(rotationMatrix);
-            cameraRight.current.crossVectors(cameraForward.current, worldUp.current);
-            cameraRight.current.normalize();
+            // Set horizontal limits - allow ±120 degrees (about 2/3 of a full turn each way)
+            const maxHorizontalAngle = Math.PI * 0.67; // ~120 degrees
+            
+            // Clamp horizontal rotation with smooth limiting
+            if (targetAngle > maxHorizontalAngle) {
+              horizontalAngle.current = maxHorizontalAngle;
+            } else if (targetAngle < -maxHorizontalAngle) {
+              horizontalAngle.current = -maxHorizontalAngle;
+            } else {
+              horizontalAngle.current = targetAngle;
+            }
+            
+            // Calculate the actual rotation to apply (difference from previous angle)
+            const previousAngle = horizontalAngle.current + mouseX;
+            const actualRotation = horizontalAngle.current - previousAngle;
+            
+            if (Math.abs(actualRotation) > 0.001) {
+              const rotationMatrix = new THREE.Matrix4();
+              rotationMatrix.makeRotationAxis(worldUp.current, actualRotation);
+              
+              // Rotate forward and right vectors around world up
+              cameraForward.current.applyMatrix4(rotationMatrix);
+              cameraRight.current.crossVectors(cameraForward.current, worldUp.current);
+              cameraRight.current.normalize();
+            }
           }
           
           // VERTICAL ROTATION (up/down) - rotate around right axis with limits
