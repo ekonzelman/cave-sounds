@@ -28,13 +28,23 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Mouse look state
-  const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ')); // YXZ order prevents gimbal lock
+  // Mouse look state - track angles directly for smoother movement
+  const pitch = useRef(0); // X rotation (up/down)
+  const yaw = useRef(0);   // Y rotation (left/right)
   const [isPointerLocked, setIsPointerLocked] = useState(false);
+  
+  // Smoothing state for mouse movement
+  const lastMouseTime = useRef(0);
 
   // Set initial camera position and setup pointer lock
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
+    
+    // Initialize mouse look angles from current camera rotation
+    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    pitch.current = euler.x;
+    yaw.current = euler.y;
+    lastMouseTime.current = performance.now();
     
     // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -52,45 +62,39 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          const sensitivity = 0.0015; // Slightly reduced sensitivity for smoother control
+          // Smoother sensitivity with frame-rate independence  
+          const sensitivity = 0.0012; // Reduced for smoother movement
           
-          // Get current euler angles
-          euler.current.setFromQuaternion(camera.quaternion);
+          // Apply mouse movement directly to pitch/yaw for smoother control
+          const mouseX = event.movementX * sensitivity;
+          const mouseY = event.movementY * sensitivity;
           
-          // Apply horizontal rotation (yaw) - no limits needed
-          euler.current.y -= event.movementX * sensitivity;
+          // Update yaw (left/right) - unlimited horizontal rotation
+          yaw.current -= mouseX;
           
-          // Apply vertical rotation (pitch) with strict limits
-          euler.current.x -= event.movementY * sensitivity;
+          // Update pitch (up/down) with smooth clamping
+          const targetPitch = pitch.current - mouseY;
+          const maxPitch = Math.PI * 0.44; // ~80 degrees for comfort
           
-          // CRITICAL: Clamp vertical rotation to prevent upside-down flipping
-          // Limit to ±85 degrees to prevent gimbal lock and maintain proper orientation
-          const maxPitch = Math.PI * 0.47; // ~85 degrees (just under 90°)
-          const minPitch = -maxPitch;
-          euler.current.x = Math.max(minPitch, Math.min(maxPitch, euler.current.x));
-          
-          // Ensure Z rotation stays at 0 to prevent camera roll
-          euler.current.z = 0;
-          
-          // Apply the rotation with YXZ order to maintain proper up vector
-          camera.quaternion.setFromEuler(euler.current);
-          
-          // Double-check and enforce up vector to prevent any residual flipping
-          const worldUp = new THREE.Vector3(0, 1, 0);
-          const cameraUp = new THREE.Vector3(0, 1, 0);
-          cameraUp.applyQuaternion(camera.quaternion);
-          
-          // If camera is flipped (up vector pointing down), correct it
-          if (cameraUp.y < 0) {
-            console.warn('Camera flip detected, correcting orientation');
-            // Reset to a safe forward-looking position
-            euler.current.set(0, euler.current.y, 0);
-            camera.quaternion.setFromEuler(euler.current);
+          // Smooth exponential clamping to prevent sudden boundary jumps
+          const dampingFactor = 0.95;
+          if (targetPitch > maxPitch) {
+            pitch.current = maxPitch * dampingFactor + pitch.current * (1 - dampingFactor);
+          } else if (targetPitch < -maxPitch) {
+            pitch.current = -maxPitch * dampingFactor + pitch.current * (1 - dampingFactor);
+          } else {
+            pitch.current = targetPitch;
           }
+          
+          // Create clean euler rotation from our tracked angles
+          const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
+          camera.quaternion.setFromEuler(euler);
           
         } catch (error) {
           console.warn('Mouse look error:', error);
-          // Exit pointer lock if there's an error
+          // Reset angles on error
+          pitch.current = 0;
+          yaw.current = 0;
           if (document.exitPointerLock) {
             document.exitPointerLock();
           }
