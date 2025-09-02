@@ -243,47 +243,55 @@ export default function Cave() {
       ))}
 
       {/* Custom cave objects from admin panel */}
-      {console.log('Rendering cave objects:', caveObjects.length, 'isLoading:', isLoading)}
-      {!isLoading && caveObjects.length > 0 && caveObjects.map((obj) => (
-        <group key={obj.id} position={obj.position} scale={obj.scale} rotation={obj.rotation}>
-          <mesh>
-            {/* Render different geometries based on object type */}
-            {obj.objectType === 'stalactite' && (
-              <coneGeometry args={[0.5, 3, 8]} />
-            )}
-            {obj.objectType === 'stalagmite' && (
-              <coneGeometry args={[0.8, 2, 8]} />
-            )}
+      {!isLoading && caveObjects.length > 0 && caveObjects.map((obj) => {
+        console.log('Rendering cave object:', obj.id, obj.objectType, 'at position:', obj.position, 'scale:', obj.scale, 'color:', obj.color);
+        return (
+          <group key={obj.id} position={obj.position} scale={obj.scale} rotation={obj.rotation || [0, 0, 0]}>
+            <mesh>
+              {/* Render different geometries based on object type */}
+              {obj.objectType === 'stalactite' && (
+                <coneGeometry args={[0.5, 3, 8]} />
+              )}
+              {obj.objectType === 'stalagmite' && (
+                <coneGeometry args={[0.8, 2, 8]} />
+              )}
+              {obj.objectType === 'crystal' && (
+                <octahedronGeometry args={[0.7]} />
+              )}
+              {obj.objectType === 'flowstone' && (
+                <boxGeometry args={[1.5, 0.3, 1]} />
+              )}
+              {obj.objectType === 'particle_system' && (
+                <sphereGeometry args={[0.1, 8, 8]} />
+              )}
+              
+              <meshStandardMaterial
+                color={obj.color}
+                transparent
+                opacity={obj.opacity}
+                roughness={0.8}
+                metalness={0.2}
+              />
+            </mesh>
+            
+            {/* Add glow effect for crystals */}
             {obj.objectType === 'crystal' && (
-              <octahedronGeometry args={[0.7]} />
-            )}
-            {obj.objectType === 'flowstone' && (
-              <boxGeometry args={[1.5, 0.3, 1]} />
-            )}
-            {obj.objectType === 'particle_system' && (
-              <sphereGeometry args={[0.1, 8, 8]} />
+              <pointLight
+                position={[0, 0, 0]}
+                color={obj.color}
+                intensity={currentSong ? 2 : 0.5}
+                distance={10}
+              />
             )}
             
-            <meshStandardMaterial
-              color={obj.color}
-              transparent
-              opacity={obj.opacity}
-              roughness={0.8}
-              metalness={0.2}
-            />
-          </mesh>
-          
-          {/* Add glow effect for crystals */}
-          {obj.objectType === 'crystal' && (
-            <pointLight
-              position={[0, 0, 0]}
-              color={obj.color}
-              intensity={currentSong ? 2 : 0.5}
-              distance={10}
-            />
-          )}
-        </group>
-      ))}
+            {/* Add a visible marker for debugging */}
+            <mesh position={[0, 2, 0]}>
+              <sphereGeometry args={[0.1]} />
+              <meshBasicMaterial color="#ff0000" />
+            </mesh>
+          </group>
+        );
+      })}
 
       {/* Realistic Stalactites - hanging from ceiling */}
       {[...Array(15)].map((_, i) => {

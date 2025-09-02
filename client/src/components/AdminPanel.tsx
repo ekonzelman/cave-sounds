@@ -25,13 +25,13 @@ export default function AdminPanel() {
   const [newCaveObject, setNewCaveObject] = useState({
     objectType: 'stalactite',
     positionX: 0,
-    positionY: 10,
-    positionZ: 0,
-    scaleX: 1.0,
-    scaleY: 1.0,
-    scaleZ: 1.0,
-    color: '#ffffff',
-    opacity: 0.8,
+    positionY: -3,  // Much lower Y position to be visible from player level
+    positionZ: 5,   // A bit forward from origin
+    scaleX: 2.0,    // Make objects larger so they're more visible
+    scaleY: 2.0,
+    scaleZ: 2.0,
+    color: '#ff0000',  // Bright red for high visibility
+    opacity: 1.0,   // Full opacity
     rotationX: 0,
     rotationY: 0,
     rotationZ: 0
@@ -137,13 +137,13 @@ export default function AdminPanel() {
         setNewCaveObject({
           objectType: 'stalactite',
           positionX: 0,
-          positionY: 10,
-          positionZ: 0,
-          scaleX: 1.0,
-          scaleY: 1.0,
-          scaleZ: 1.0,
-          color: '#ffffff',
-          opacity: 0.8,
+          positionY: -3,
+          positionZ: 5,
+          scaleX: 2.0,
+          scaleY: 2.0,
+          scaleZ: 2.0,
+          color: '#ff0000',
+          opacity: 1.0,
           rotationX: 0,
           rotationY: 0,
           rotationZ: 0
@@ -428,7 +428,7 @@ export default function AdminPanel() {
                     <Slider
                       value={[newCaveObject.positionY]}
                       onValueChange={(value) => setNewCaveObject(prev => ({ ...prev, positionY: value[0] }))}
-                      max={30}
+                      max={10}
                       min={-10}
                       step={0.1}
                     />
