@@ -54,7 +54,23 @@ export default function Cave() {
     mineral: '#1a5490'
   });
   
-  // Update lighting colors based on audio
+  // AUDIO-REACTIVE Reference object colors
+  const [referenceObjectColors, setReferenceObjectColors] = useState({
+    lightSource: {
+      core: '#ffffff',
+      emissive: '#ffff88',
+      lightColor: '#ffff88',
+      intensity: 3
+    },
+    blackHole: {
+      core: '#000000',
+      accretion: ['#8b5fbf', '#5d4e75', '#2d1b3d'],
+      lightColor: '#4a148c',
+      intensity: 0.5
+    }
+  });
+  
+  // Update lighting colors and reference objects based on audio
   useFrame(() => {
     if (currentSong && audioAnalyzer) {
       const frequencyData = audioAnalyzer.getFrequencyData();
@@ -63,12 +79,59 @@ export default function Cave() {
         const normalizedAudio = avgFrequency / 255;
         const time = Date.now() * 0.001;
         
-        // Dynamic color cycling based on audio
+        // Dynamic color cycling based on audio for cave atmosphere
         const hue = (time * 30 + normalizedAudio * 60) % 360;
         setAudioReactiveColors({
           ambient: `hsl(${hue}, 70%, 20%)`,
           directional: `hsl(${(hue + 120) % 360}, 80%, 40%)`,
           mineral: `hsl(${(hue + 240) % 360}, 90%, 60%)`
+        });
+        
+        // LIGHT SOURCE - Bright pulsing colors
+        const lightHue = (time * 60 + normalizedAudio * 180) % 360;
+        const lightIntensity = 3 + normalizedAudio * 4; // 3-7 intensity range
+        const brightColors = [
+          `hsl(${lightHue}, 100%, 80%)`, // Bright saturated
+          `hsl(${(lightHue + 90) % 360}, 90%, 85%)`, // Bright shifted
+          '#00ffff', // Cyan
+          '#ffff00', // Yellow
+          '#ffffff', // White
+          '#ff00ff'  // Magenta
+        ];
+        const lightColorIndex = Math.floor((time * 2 + normalizedAudio * 3) % brightColors.length);
+        const selectedLightColor = brightColors[lightColorIndex];
+        
+        // BLACK HOLE - Dark pulsing colors
+        const darkHue = (time * 40 + normalizedAudio * 120) % 360;
+        const darkIntensity = 0.5 + normalizedAudio * 1.5; // 0.5-2 intensity range
+        const darkColors = [
+          `hsl(${darkHue + 270}, 80%, 15%)`, // Deep purple
+          `hsl(${darkHue + 240}, 90%, 10%)`, // Deep blue
+          `hsl(${darkHue + 300}, 70%, 8%)`,  // Deep magenta
+          '#1a0033', // Very dark purple
+          '#000066', // Very dark blue
+          '#330066'  // Dark violet
+        ];
+        const darkColorIndex = Math.floor((time * 1.5 + normalizedAudio * 2) % darkColors.length);
+        const selectedDarkColor = darkColors[darkColorIndex];
+        
+        setReferenceObjectColors({
+          lightSource: {
+            core: selectedLightColor,
+            emissive: selectedLightColor,
+            lightColor: selectedLightColor,
+            intensity: lightIntensity
+          },
+          blackHole: {
+            core: '#000000',
+            accretion: [
+              selectedDarkColor,
+              `hsl(${darkHue + 280}, 70%, 20%)`,
+              `hsl(${darkHue + 260}, 60%, 12%)`
+            ],
+            lightColor: selectedDarkColor,
+            intensity: darkIntensity
+          }
         });
       }
     } else {
@@ -77,6 +140,21 @@ export default function Cave() {
         ambient: '#2c1810',
         directional: '#4a3728',
         mineral: '#1a5490'
+      });
+      
+      setReferenceObjectColors({
+        lightSource: {
+          core: '#ffffff',
+          emissive: '#ffff88',
+          lightColor: '#ffff88',
+          intensity: 3
+        },
+        blackHole: {
+          core: '#000000',
+          accretion: ['#8b5fbf', '#5d4e75', '#2d1b3d'],
+          lightColor: '#4a148c',
+          intensity: 0.5
+        }
       });
     }
   });
@@ -485,43 +563,83 @@ export default function Cave() {
       )}
       
       {/* ORIENTATION REFERENCE OBJECTS */}
-      {/* Light source at the TOP - always visible as "ceiling" reference */}
+      {/* AUDIO-REACTIVE Light source at the TOP - bright colors pulse with music */}
       <group position={[0, 50, 0]}>
         <mesh>
           <sphereGeometry args={[2, 16, 16]} />
-          <meshStandardMaterial color="#ffffff" emissive="#ffff88" emissiveIntensity={0.8} />
+          <meshStandardMaterial 
+            color={referenceObjectColors.lightSource.core} 
+            emissive={referenceObjectColors.lightSource.emissive} 
+            emissiveIntensity={currentSong ? 1.2 : 0.8} 
+          />
         </mesh>
         <pointLight
-          intensity={3}
+          intensity={referenceObjectColors.lightSource.intensity}
           distance={100}
-          color="#ffff88"
+          color={referenceObjectColors.lightSource.lightColor}
         />
-        {/* Light rays effect */}
+        {/* Audio-reactive light rays effect */}
         {[...Array(8)].map((_, i) => {
           const angle = (i / 8) * Math.PI * 2;
           return (
             <mesh key={i} rotation={[0, angle, 0]} position={[Math.cos(angle) * 3, 0, Math.sin(angle) * 3]}>
               <cylinderGeometry args={[0.05, 0.05, 6]} />
-              <meshBasicMaterial color="#ffff88" transparent opacity={0.4} />
+              <meshBasicMaterial 
+                color={referenceObjectColors.lightSource.lightColor} 
+                transparent 
+                opacity={currentSong ? 0.6 : 0.4} 
+              />
             </mesh>
           );
         })}
+        
+        {/* Additional pulsing light rings for dramatic effect */}
+        {currentSong && [...Array(3)].map((_, i) => (
+          <mesh key={`light-ring-${i}`} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[4 + i * 2, 0.2, 8, 32]} />
+            <meshBasicMaterial 
+              color={referenceObjectColors.lightSource.lightColor}
+              transparent 
+              opacity={0.3 - i * 0.1} 
+            />
+          </mesh>
+        ))}
       </group>
       
-      {/* Black hole at the BOTTOM - always visible as "floor" reference */}
+      {/* AUDIO-REACTIVE Black hole at the BOTTOM - dark colors pulse with music */}
       <group position={[0, -50, 0]}>
         <mesh>
           <sphereGeometry args={[2.5, 16, 16]} />
-          <meshStandardMaterial color="#000000" emissive="#000000" />
+          <meshStandardMaterial color={referenceObjectColors.blackHole.core} emissive={referenceObjectColors.blackHole.core} />
         </mesh>
-        {/* Accretion disk effect */}
+        
+        {/* Audio-reactive dark glow */}
+        <pointLight
+          intensity={referenceObjectColors.blackHole.intensity}
+          distance={30}
+          color={referenceObjectColors.blackHole.lightColor}
+        />
+        
+        {/* Audio-reactive accretion disk effect */}
         {[...Array(3)].map((_, i) => (
           <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
             <torusGeometry args={[3 + i * 1.5, 0.1, 4, 32]} />
             <meshBasicMaterial 
-              color={`hsl(${280 + i * 20}, 80%, ${30 - i * 5}%)`} 
+              color={referenceObjectColors.blackHole.accretion[i]} 
               transparent 
-              opacity={0.6 - i * 0.1} 
+              opacity={currentSong ? 0.8 - i * 0.1 : 0.6 - i * 0.1} 
+            />
+          </mesh>
+        ))}
+        
+        {/* Additional dark energy rings when music is playing */}
+        {currentSong && [...Array(2)].map((_, i) => (
+          <mesh key={`dark-ring-${i}`} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[8 + i * 3, 0.3, 6, 16]} />
+            <meshBasicMaterial 
+              color={referenceObjectColors.blackHole.accretion[0]}
+              transparent 
+              opacity={0.2 - i * 0.05} 
             />
           </mesh>
         ))}
