@@ -8,13 +8,13 @@ interface AudioVisualizerProps {
   visualizationFilter?: 'bars' | 'wave' | 'spiral' | 'burst';
 }
 
-export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioVisualizerProps) {
+export default function AudioVisualizer({ visualizationFilter }: AudioVisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const particleBufferRef = useRef<THREE.BufferAttribute>(null);
   const { 
     currentSong, 
     audioAnalyzer, 
-    visualizationFilter: activeFilter, 
+    visualizationFilter: storeFilter, 
     playerPosition, 
     songNodes,
     visualizationIntensity,
@@ -24,7 +24,8 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
   const { isMuted } = useAudio();
   
   const particleCount = 1000; // Much more particles for dramatic effect
-  const currentFilter = visualizationFilter || activeFilter;
+  const currentFilter = visualizationFilter || storeFilter;
+  
 
   // Dynamic particles for audio visualization
   const particles = useMemo(() => {
