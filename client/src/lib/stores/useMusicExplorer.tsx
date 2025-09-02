@@ -342,6 +342,21 @@ export const useMusicExplorer = create<MusicExplorerState>()(
         });
     },
 
+    refreshSongs: () => {
+      // Refresh songs from the server to get updated customizations
+      fetch('/api/songs')
+        .then(response => response.json())
+        .then(songs => {
+          console.log('Refreshed songs from server:', songs);
+          // Ensure we have an array
+          const songList = Array.isArray(songs) ? songs : [];
+          set({ songNodes: songList });
+        })
+        .catch(error => {
+          console.error('Error refreshing songs:', error);
+        });
+    },
+
     updateTransitionAnimation: (deltaTime) => {
       const { isTransitioning, visualizationIntensity } = get();
       

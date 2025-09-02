@@ -10,7 +10,7 @@ import { Slider } from './ui/slider';
 import type { CaveObjectNode } from '../../../shared/schema';
 
 export default function AdminPanel() {
-  const { toggleAdmin, uploadAudioFile, songNodes, deleteSongNode } = useMusicExplorer();
+  const { toggleAdmin, uploadAudioFile, songNodes, deleteSongNode, refreshSongs } = useMusicExplorer();
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [caveObjects, setCaveObjects] = useState<CaveObjectNode[]>([]);
@@ -112,6 +112,8 @@ export default function AdminPanel() {
       });
       
       if (response.ok) {
+        // Refresh song data to show updated customization
+        refreshSongs();
         setUploadStatus('Song customization updated successfully!');
         setTimeout(() => setUploadStatus(''), 3000);
       }

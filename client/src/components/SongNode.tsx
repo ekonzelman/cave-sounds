@@ -12,6 +12,11 @@ interface SongNodeProps {
     title: string;
     filename: string;
     discovered: boolean;
+    nodeShape?: string;
+    nodeSize?: number;
+    nodeColor?: string;
+    glowIntensity?: number;
+    animationStyle?: string;
   };
 }
 
@@ -69,8 +74,9 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
         const normalizedAudio = avgFrequency / 255;
         
-        // Pulse the main sphere based on audio - with smooth transition
-        const pulseScale = 1 + (normalizedAudio * 0.3 * visualizationIntensity);
+        // Pulse the main sphere based on audio - with smooth transition and custom size
+        const baseSize = songData.nodeSize || 1.0;
+        const pulseScale = baseSize + (normalizedAudio * 0.3 * visualizationIntensity * baseSize);
         meshRef.current.scale.setScalar(pulseScale);
         
         // Rotate the outer ring - with transition intensity
@@ -90,8 +96,9 @@ export default function SongNode({ position, songData }: SongNodeProps) {
           const audioValue = frequencyData[i % frequencyData.length] || 0;
           const barNormalizedAudio = audioValue / 255;
           
-          // Different animations based on visualization mode
-          switch (visualizationFilter) {
+          // Different animations based on song's custom animation style
+          const animationMode = songData.animationStyle || 'pulse';
+          switch (animationMode) {
             case 'wave':
               // DRAMATIC Wave motion - massive bars in wave pattern
               try {
@@ -175,10 +182,11 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         }
       }
     } else {
-      // Reset to normal size when not playing
-      meshRef.current.scale.setScalar(1);
+      // Reset to custom base size when not playing
+      const baseSize = songData.nodeSize || 1.0;
+      meshRef.current.scale.setScalar(baseSize);
       if (outerRingRef.current) {
-        outerRingRef.current.scale.setScalar(1);
+        outerRingRef.current.scale.setScalar(baseSize);
       }
       // Reset frequency bars
       for (let i = 0; i < frequencyBarRefs.current.length; i++) {
@@ -208,6 +216,15 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   };
 
   const getNodeColor = () => {
+    // Use custom node color if available, otherwise fallback to status-based colors
+    if (songData.nodeColor && isDiscovered) {
+      // For discovered nodes, use the custom color
+      if (currentSong?.id === songData.id) return songData.nodeColor; // Currently playing - use custom color
+      if (hovered) return songData.nodeColor; // Hovered - use custom color
+      return songData.nodeColor; // Discovered but not playing - use custom color
+    }
+    
+    // Fallback to original status-based colors for undiscovered or nodes without custom color
     if (!isDiscovered) return '#0099ff'; // Undiscovered - bright blue glow
     if (currentSong?.id === songData.id) return '#ff0080'; // Currently playing - bright magenta
     if (hovered) return '#00ffff'; // Hovered - cyan
@@ -215,25 +232,48 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   };
 
   const getEmissiveColor = () => {
+    // Use custom node color for emissive if available
+    if (songData.nodeColor && isDiscovered) {
+      return songData.nodeColor;
+    }
+    
+    // Fallback to original emissive colors
     if (!isDiscovered) return '#0066cc';
     if (currentSong?.id === songData.id) return '#ff0080';
     return '#ffffff';
   };
 
+  // Get the proper geometry based on nodeShape
+  const getNodeGeometry = () => {
+    const baseSize = songData.nodeSize || 1.0;
+    switch (songData.nodeShape) {
+      case 'cube':
+        return <boxGeometry args={[baseSize * 2, baseSize * 2, baseSize * 2]} />;
+      case 'cylinder':
+        return <cylinderGeometry args={[baseSize, baseSize, baseSize * 2, 16]} />;
+      case 'dodecahedron':
+        return <dodecahedronGeometry args={[baseSize]} />;
+      case 'octahedron':
+        return <octahedronGeometry args={[baseSize]} />;
+      default: // sphere
+        return <sphereGeometry args={[baseSize, 32, 32]} />;
+    }
+  };
+
   return (
     <group position={position}>
-      {/* Main song node - completely static glowing orb */}
+      {/* Main song node with custom shape */}
       <mesh
         ref={meshRef}
         onClick={handleClick}
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
       >
-        <sphereGeometry args={[1.5, 16, 16]} />
+        {getNodeGeometry()}
         <meshBasicMaterial
           color={getNodeColor()}
           transparent
-          opacity={isDiscovered ? 1 : 0.9}
+          opacity={isDiscovered ? (songData.glowIntensity || 1.0) : 0.9}
         />
       </mesh>
 
@@ -243,7 +283,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         <meshBasicMaterial
           color={getNodeColor()}
           transparent
-          opacity={isDiscovered ? 0.8 : 0.4}
+          opacity={isDiscovered ? (songData.glowIntensity || 1.0) * 0.8 : 0.4}
           side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
         />
@@ -256,7 +296,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
           color={getNodeColor()}
           size={0.12}
           transparent
-          opacity={isDiscovered ? 0.8 : 0.5}
+          opacity={isDiscovered ? (songData.glowIntensity || 1.0) * 0.8 : 0.5}
           blending={THREE.AdditiveBlending}
         />
       </points>
