@@ -93,10 +93,16 @@ export default function AdminPanel() {
 
   const handleDeleteSong = async (songId: string) => {
     if (window.confirm('Are you sure you want to delete this song?')) {
+      setUploadStatus('Deleting song...');
+      
       try {
         await deleteSongNode(songId);
+        setUploadStatus('Song deleted successfully!');
+        setTimeout(() => setUploadStatus(''), 3000);
       } catch (error) {
         console.error('Delete error:', error);
+        setUploadStatus(`Delete failed: ${error.message || 'Unknown error'}`);
+        setTimeout(() => setUploadStatus(''), 5000);
       }
     }
   };

@@ -74,11 +74,23 @@ export class MemStorage implements IStorage {
   async getSong(id: string): Promise<Song | undefined> {
     try {
       const result = await db.select().from(songs).where(eq(songs.id, id));
-      return result[0];
+      if (result[0]) {
+        console.log(`Found song ${id} in database: ${result[0].title}`);
+        return result[0];
+      }
     } catch (error) {
-      console.error('Error fetching song from database:', error);
-      return this.songsMap.get(id);
+      console.log(`Database getSong failed for ${id}, checking in-memory:`, error.message);
     }
+    
+    // Check in-memory storage
+    const memSong = this.songsMap.get(id);
+    if (memSong) {
+      console.log(`Found song ${id} in memory: ${memSong.title}`);
+      return memSong;
+    }
+    
+    console.log(`Song ${id} not found in database or memory`);
+    return undefined;
   }
 
   async createSong(song: Omit<InsertSong, 'uploadedAt'> & { uploadedAt?: string }): Promise<Song> {
@@ -104,13 +116,19 @@ export class MemStorage implements IStorage {
   }
 
   async deleteSong(id: string): Promise<void> {
+    console.log(`Storage: Attempting to delete song ${id}`);
+    
     try {
-      await db.delete(songs).where(eq(songs.id, id));
+      const result = await db.delete(songs).where(eq(songs.id, id));
+      console.log(`Database deletion result:`, result);
     } catch (error) {
-      console.error('Error deleting song from database:', error);
-      // Fallback to in-memory storage
-      this.songsMap.delete(id);
+      console.log(`Database deletion failed, using in-memory fallback:`, error.message);
     }
+    
+    // Always try to delete from in-memory storage as well (covers both scenarios)
+    const wasInMemory = this.songsMap.has(id);
+    this.songsMap.delete(id);
+    console.log(`In-memory deletion: ${wasInMemory ? 'found and deleted' : 'not found'}`);
   }
 
   async updateSongDiscovery(id: string, discovered: boolean): Promise<void> {

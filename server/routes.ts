@@ -103,28 +103,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/songs/:id', async (req, res) => {
     try {
       const songId = req.params.id;
+      console.log(`Attempting to delete song: ${songId}`);
+      
+      // Try to get the song (this will use fallback if database fails)
       const song = await storage.getSong(songId);
       
       if (!song) {
+        console.log(`Song not found: ${songId}`);
         return res.status(404).json({ error: 'Song not found' });
       }
 
-      // Delete the audio file
-      const filePath = path.join(uploadDir, song.filename);
-      try {
-        await fs.unlink(filePath);
-      } catch (fileError) {
-        console.error('Error deleting file:', fileError);
-        // Continue with database deletion even if file deletion fails
+      console.log(`Found song to delete: ${song.title} (${song.filename})`);
+
+      // Try to delete the audio file, but only for non-default songs
+      if (!songId.startsWith('default-')) {
+        const filePath = path.join(uploadDir, song.filename);
+        try {
+          await fs.unlink(filePath);
+          console.log(`Deleted file: ${filePath}`);
+        } catch (fileError) {
+          console.log(`File deletion skipped or failed (this is OK for default songs): ${fileError.message}`);
+          // Continue with database deletion even if file deletion fails
+        }
+      } else {
+        console.log(`Skipping file deletion for default song: ${songId}`);
       }
 
-      // Delete from database
+      // Delete from database/storage
       await storage.deleteSong(songId);
+      console.log(`Song deleted from storage: ${songId}`);
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Delete error:', error);
-      res.status(500).json({ error: 'Failed to delete song' });
+      console.error('Delete error details:', {
+        error: error.message,
+        stack: error.stack,
+        songId: req.params.id
+      });
+      res.status(500).json({ 
+        error: 'Failed to delete song',
+        details: error.message 
+      });
     }
   });
 

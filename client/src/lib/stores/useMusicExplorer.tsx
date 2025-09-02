@@ -297,22 +297,42 @@ export const useMusicExplorer = create<MusicExplorerState>()(
     },
 
     deleteSongNode: async (nodeId) => {
+      console.log(`Deleting song node: ${nodeId}`);
+      
       try {
         const response = await fetch(`/api/songs/${nodeId}`, {
           method: 'DELETE'
         });
 
         if (!response.ok) {
-          throw new Error('Delete failed');
+          const errorText = await response.text();
+          console.error(`Delete failed with status ${response.status}:`, errorText);
+          throw new Error(`Delete failed: ${response.status} ${errorText}`);
         }
 
-        set((state) => ({
-          songNodes: state.songNodes.filter(node => node.id !== nodeId),
-          discoveredNodes: state.discoveredNodes.filter(node => node.id !== nodeId),
-          currentSong: state.currentSong?.id === nodeId ? null : state.currentSong
-        }));
+        const result = await response.json();
+        console.log('Delete response:', result);
+
+        // Remove from local state
+        set((state) => {
+          console.log(`Removing song ${nodeId} from ${state.songNodes.length} nodes`);
+          const filteredNodes = state.songNodes.filter(node => node.id !== nodeId);
+          console.log(`After deletion: ${filteredNodes.length} nodes remain`);
+          
+          return {
+            songNodes: filteredNodes,
+            discoveredNodes: state.discoveredNodes.filter(node => node.id !== nodeId),
+            currentSong: state.currentSong?.id === nodeId ? null : state.currentSong
+          };
+        });
+
+        console.log(`Successfully deleted song node: ${nodeId}`);
       } catch (error) {
-        console.error('Delete error:', error);
+        console.error('Delete error details:', {
+          nodeId,
+          error: error.message,
+          stack: error.stack
+        });
         throw error;
       }
     },
