@@ -10,7 +10,7 @@ export default function Cave() {
   const pointsRefs = useRef<THREE.Points[]>([]);
   const stalactiteRefs = useRef<THREE.Mesh[]>([]);
   const customObjectRefs = useRef<THREE.Mesh[]>([]);
-  const { songNodes, currentSong, audioAnalyzer } = useMusicExplorer();
+  const { songNodes, currentSong, audioAnalyzer, visualizationIntensity } = useMusicExplorer();
   const { camera } = useThree();
   const [revealedLayers, setRevealedLayers] = useState<number>(1);
   const [caveObjects, setCaveObjects] = useState<CaveObjectNode[]>([]);
@@ -570,11 +570,11 @@ export default function Cave() {
           <meshStandardMaterial 
             color={referenceObjectColors.lightSource.core} 
             emissive={referenceObjectColors.lightSource.emissive} 
-            emissiveIntensity={currentSong ? 1.2 : 0.8} 
+            emissiveIntensity={(currentSong ? 1.2 : 0.8) * visualizationIntensity} 
           />
         </mesh>
         <pointLight
-          intensity={referenceObjectColors.lightSource.intensity}
+          intensity={referenceObjectColors.lightSource.intensity * visualizationIntensity}
           distance={100}
           color={referenceObjectColors.lightSource.lightColor}
         />
@@ -587,7 +587,7 @@ export default function Cave() {
               <meshBasicMaterial 
                 color={referenceObjectColors.lightSource.lightColor} 
                 transparent 
-                opacity={currentSong ? 0.6 : 0.4} 
+                opacity={(currentSong ? 0.6 : 0.4) * visualizationIntensity} 
               />
             </mesh>
           );
@@ -600,7 +600,7 @@ export default function Cave() {
             <meshBasicMaterial 
               color={referenceObjectColors.lightSource.lightColor}
               transparent 
-              opacity={0.3 - i * 0.1} 
+              opacity={(0.3 - i * 0.1) * visualizationIntensity} 
             />
           </mesh>
         ))}
@@ -615,7 +615,7 @@ export default function Cave() {
         
         {/* Audio-reactive dark glow */}
         <pointLight
-          intensity={referenceObjectColors.blackHole.intensity}
+          intensity={referenceObjectColors.blackHole.intensity * visualizationIntensity}
           distance={30}
           color={referenceObjectColors.blackHole.lightColor}
         />
@@ -627,7 +627,7 @@ export default function Cave() {
             <meshBasicMaterial 
               color={referenceObjectColors.blackHole.accretion[i]} 
               transparent 
-              opacity={currentSong ? 0.8 - i * 0.1 : 0.6 - i * 0.1} 
+              opacity={(currentSong ? 0.8 - i * 0.1 : 0.6 - i * 0.1) * visualizationIntensity} 
             />
           </mesh>
         ))}
@@ -639,7 +639,7 @@ export default function Cave() {
             <meshBasicMaterial 
               color={referenceObjectColors.blackHole.accretion[0]}
               transparent 
-              opacity={0.2 - i * 0.05} 
+              opacity={(0.2 - i * 0.05) * visualizationIntensity} 
             />
           </mesh>
         ))}

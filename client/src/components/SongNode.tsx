@@ -21,7 +21,7 @@ export default function SongNode({ position, songData }: SongNodeProps) {
   const outerRingRef = useRef<THREE.Mesh>(null);
   const frequencyBarRefs = useRef<THREE.Mesh[]>([]);
   const [hovered, setHovered] = useState(false);
-  const { playerPosition, discoverSongNode, currentSong, togglePlayPause, audioAnalyzer, isPaused, visualizationFilter } = useMusicExplorer();
+  const { playerPosition, discoverSongNode, currentSong, togglePlayPause, audioAnalyzer, isPaused, visualizationFilter, visualizationIntensity } = useMusicExplorer();
   const { playSuccess } = useAudio();
 
   // DRAMATIC frequency bars around this song node - much larger scale
@@ -69,15 +69,15 @@ export default function SongNode({ position, songData }: SongNodeProps) {
         const avgFrequency = frequencyData.reduce((sum, val) => sum + val, 0) / frequencyData.length;
         const normalizedAudio = avgFrequency / 255;
         
-        // Pulse the main sphere based on audio
-        const pulseScale = 1 + normalizedAudio * 0.3;
+        // Pulse the main sphere based on audio - with smooth transition
+        const pulseScale = 1 + (normalizedAudio * 0.3 * visualizationIntensity);
         meshRef.current.scale.setScalar(pulseScale);
         
-        // Rotate the outer ring
-        outerRingRef.current.rotation.z += 0.02;
+        // Rotate the outer ring - with transition intensity
+        outerRingRef.current.rotation.z += 0.02 * visualizationIntensity;
         
-        // Additional pulsing for the ring
-        const ringScale = 1 + normalizedAudio * 0.2;
+        // Additional pulsing for the ring - with smooth transition
+        const ringScale = 1 + (normalizedAudio * 0.2 * visualizationIntensity);
         outerRingRef.current.scale.setScalar(ringScale);
         
         // ANIMATE FREQUENCY BARS with different visualization modes
@@ -99,8 +99,8 @@ export default function SongNode({ position, songData }: SongNodeProps) {
                 const waveScale = Math.max(1, Math.min(15, 2 + barNormalizedAudio * 8 + Math.abs(waveOffset)));
                 
                 if (isFinite(waveOffset) && isFinite(waveScale)) {
-                  barMesh.scale.y = waveScale;
-                  barMesh.position.y = waveOffset;
+                  barMesh.scale.y = waveScale * visualizationIntensity;
+                  barMesh.position.y = waveOffset * visualizationIntensity;
                   // Reset other positions to larger circle
                   const baseAngle = (i / 24) * Math.PI * 2;
                   barMesh.position.x = Math.cos(baseAngle) * 8;
@@ -124,11 +124,11 @@ export default function SongNode({ position, songData }: SongNodeProps) {
                 
                 // Ensure values are finite
                 if (isFinite(safeX) && isFinite(safeZ) && isFinite(spiralAngle)) {
-                  barMesh.position.x = safeX;
-                  barMesh.position.z = safeZ;
-                  barMesh.position.y = Math.sin(currentTime + i * 0.2) * 4; // Bigger vertical movement
-                  barMesh.scale.y = Math.max(1.5, 3 + barNormalizedAudio * 12); // Much taller bars
-                  barMesh.rotation.y = spiralAngle * 0.7;
+                  barMesh.position.x = safeX * visualizationIntensity;
+                  barMesh.position.z = safeZ * visualizationIntensity;
+                  barMesh.position.y = Math.sin(currentTime + i * 0.2) * 4 * visualizationIntensity; // Bigger vertical movement
+                  barMesh.scale.y = Math.max(1.5, (3 + barNormalizedAudio * 12) * visualizationIntensity); // Much taller bars
+                  barMesh.rotation.y = spiralAngle * 0.7 * visualizationIntensity;
                 }
               } catch (error) {
                 console.warn('Spiral animation error:', error);
@@ -147,11 +147,11 @@ export default function SongNode({ position, songData }: SongNodeProps) {
                 const burstZ = Math.sin(burstAngle) * burstRadius;
                 
                 if (isFinite(burstX) && isFinite(burstZ) && isFinite(burstIntensity)) {
-                  barMesh.position.x = burstX;
-                  barMesh.position.z = burstZ;
-                  barMesh.position.y = Math.sin(currentTime + i * 0.3) * 2;
-                  barMesh.scale.y = Math.max(2, Math.min(20, 4 + burstIntensity * 12)); // Much taller bars
-                  barMesh.scale.x = barMesh.scale.z = Math.max(1, Math.min(4, 1.5 + burstIntensity * 2));
+                  barMesh.position.x = burstX * visualizationIntensity;
+                  barMesh.position.z = burstZ * visualizationIntensity;
+                  barMesh.position.y = Math.sin(currentTime + i * 0.3) * 2 * visualizationIntensity;
+                  barMesh.scale.y = Math.max(2, Math.min(20, (4 + burstIntensity * 12) * visualizationIntensity)); // Much taller bars
+                  barMesh.scale.x = barMesh.scale.z = Math.max(1, Math.min(4, (1.5 + burstIntensity * 2) * visualizationIntensity));
                 }
               } catch (error) {
                 console.warn('Burst animation error:', error);
@@ -163,13 +163,13 @@ export default function SongNode({ position, songData }: SongNodeProps) {
               
             default: // 'bars'
               // DRAMATIC Standard frequency bars - much larger
-              const scaleY = 2 + barNormalizedAudio * 15; // Much taller bars
+              const scaleY = (2 + barNormalizedAudio * 15) * visualizationIntensity; // Much taller bars
               barMesh.scale.y = scaleY;
               // Reset position and scale to larger circle
               barMesh.position.x = Math.cos((i / 24) * Math.PI * 2) * 8;
               barMesh.position.z = Math.sin((i / 24) * Math.PI * 2) * 8;
               barMesh.position.y = 0;
-              barMesh.scale.x = barMesh.scale.z = 1.5 + barNormalizedAudio * 2; // Thicker bars
+              barMesh.scale.x = barMesh.scale.z = (1.5 + barNormalizedAudio * 2) * visualizationIntensity; // Thicker bars
               barMesh.rotation.y = 0;
           }
         }

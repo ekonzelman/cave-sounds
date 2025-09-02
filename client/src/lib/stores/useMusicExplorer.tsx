@@ -29,6 +29,9 @@ interface MusicExplorerState {
   audioAnalyzer: AudioAnalyzer | null;
   visualizationFilter: VisualizationFilter;
   isPaused: boolean;
+  // Animation transition states
+  visualizationIntensity: number; // 0-1, gradually increases when song starts
+  isTransitioning: boolean;
   
   // Actions
   setPlayerPosition: (position: THREE.Vector3) => void;
@@ -45,6 +48,7 @@ interface MusicExplorerState {
   uploadAudioFile: (file: File) => Promise<void>;
   deleteSongNode: (nodeId: string) => Promise<void>;
   initializeDefaultSongs: () => void;
+  updateTransitionAnimation: (deltaTime: number) => void;
 }
 
 class SimpleAudioAnalyzer implements AudioAnalyzer {
@@ -104,6 +108,9 @@ export const useMusicExplorer = create<MusicExplorerState>()(
     audioAnalyzer: null,
     visualizationFilter: "bars",
     isPaused: false,
+    // Initialize transition states
+    visualizationIntensity: 0,
+    isTransitioning: false,
 
     setPlayerPosition: (position) => set({ playerPosition: position }),
 
@@ -162,7 +169,10 @@ export const useMusicExplorer = create<MusicExplorerState>()(
         currentSong: song,
         audioElement: newAudioElement,
         audioAnalyzer: newAnalyzer,
-        isPaused: false
+        isPaused: false,
+        // Start transition animation
+        visualizationIntensity: 0,
+        isTransitioning: true
       });
     },
 
@@ -194,7 +204,10 @@ export const useMusicExplorer = create<MusicExplorerState>()(
         currentSong: null,
         audioElement: null,
         audioAnalyzer: null,
-        isPaused: false
+        isPaused: false,
+        // Reset transition states
+        visualizationIntensity: 0,
+        isTransitioning: false
       });
     },
 
@@ -327,6 +340,25 @@ export const useMusicExplorer = create<MusicExplorerState>()(
           ];
           set({ songNodes: defaultSongs });
         });
+    },
+
+    updateTransitionAnimation: (deltaTime) => {
+      const { isTransitioning, visualizationIntensity } = get();
+      
+      if (isTransitioning) {
+        const transitionSpeed = 1.8; // How fast the transition happens (higher = faster)
+        const newIntensity = Math.min(1, visualizationIntensity + deltaTime * transitionSpeed);
+        
+        // Use easing for smooth transitions - cubic ease out
+        const easedIntensity = 1 - Math.pow(1 - newIntensity, 3);
+        
+        set({ visualizationIntensity: easedIntensity });
+        
+        // End transition when fully faded in
+        if (newIntensity >= 1) {
+          set({ isTransitioning: false });
+        }
+      }
     }
   }))
 );

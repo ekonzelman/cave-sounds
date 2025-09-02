@@ -11,7 +11,16 @@ interface AudioVisualizerProps {
 export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioVisualizerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const particleBufferRef = useRef<THREE.BufferAttribute>(null);
-  const { currentSong, audioAnalyzer, visualizationFilter: activeFilter, playerPosition, songNodes } = useMusicExplorer();
+  const { 
+    currentSong, 
+    audioAnalyzer, 
+    visualizationFilter: activeFilter, 
+    playerPosition, 
+    songNodes,
+    visualizationIntensity,
+    isTransitioning,
+    updateTransitionAnimation
+  } = useMusicExplorer();
   const { isMuted } = useAudio();
   
   const particleCount = 1000; // Much more particles for dramatic effect
@@ -77,8 +86,11 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
     return bars;
   }, []);
 
-  // ORBITAL FREQUENCY BARS ANIMATION - ALWAYS VISIBLE AND MOVING
-  useFrame((state) => {
+  // ORBITAL FREQUENCY BARS ANIMATION - WITH SMOOTH TRANSITIONS
+  useFrame((state, delta) => {
+    // Update transition animation for smooth fade-in
+    updateTransitionAnimation(delta);
+    
     if (!audioAnalyzer || !currentSong || isMuted) return;
 
     const frequencyData = audioAnalyzer.getFrequencyData();
@@ -102,11 +114,19 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
       barMesh.position.z = Math.sin(baseAngle) * radius;
       barMesh.position.y = 15 + Math.sin(currentTime + i * 0.3) * 10; // Higher and dancing in air
       
-      // DRAMATIC Audio scaling - much taller bars
-      barMesh.scale.y = 2 + normalizedAudio * 15;
+      // SMOOTH TRANSITION SCALING - Apply visualizationIntensity for fade-in
+      const baseScale = 2 + normalizedAudio * 15;
+      barMesh.scale.y = baseScale * visualizationIntensity;
+      barMesh.scale.x = barMesh.scale.z = visualizationIntensity;
       
       // Bar rotation
       barMesh.rotation.y = currentTime * 3;
+      
+      // Apply smooth opacity fade-in via material
+      if (barMesh.material instanceof THREE.MeshBasicMaterial) {
+        barMesh.material.opacity = visualizationIntensity;
+        barMesh.material.transparent = true;
+      }
     }
   });
 
@@ -137,9 +157,9 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
           />
         </bufferGeometry>
         <pointsMaterial
-          size={currentSong ? 0.5 : 0.15} // Much larger when music is playing
+          size={(currentSong ? 0.5 : 0.15) * visualizationIntensity} // Much larger when music is playing, with smooth fade-in
           transparent
-          opacity={currentSong ? 0.9 : 0.6}
+          opacity={(currentSong ? 0.9 : 0.6) * visualizationIntensity}
           vertexColors
           blending={THREE.AdditiveBlending}
         />
@@ -162,7 +182,7 @@ export default function AudioVisualizer({ visualizationFilter = 'bars' }: AudioV
             <meshBasicMaterial 
               color={color} 
               transparent 
-              opacity={0.9}
+              opacity={0.9 * visualizationIntensity}
             />
           </mesh>
         );
