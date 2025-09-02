@@ -28,20 +28,15 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Bounded camera system with ±150° horizontal and ±80° vertical rotation to prevent inversion
-  const yaw = useRef(0);   // Horizontal rotation (left/right) - BOUNDED ±150° rotation
-  const pitch = useRef(0); // Vertical rotation (up/down) - BOUNDED ±80° range
+  // Full freedom camera system with complete 360° horizontal and 180° vertical rotation
+  const yaw = useRef(0);   // Horizontal rotation (left/right) - UNLIMITED 360° rotation
+  const pitch = useRef(0); // Vertical rotation (up/down) - FULL 180° range (straight up to straight down)
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  // BOUNDED ROTATION LIMITS - Prevent inversion while allowing wide range
-  const MAX_PITCH = Math.PI * 0.44;    // ~80 degrees up (safe limit)
-  const MIN_PITCH = -Math.PI * 0.44;   // ~80 degrees down (safe limit)
-  const MAX_YAW = Math.PI * 0.83;      // ~150 degrees left (wide but safe)
-  const MIN_YAW = -Math.PI * 0.83;     // ~150 degrees right (wide but safe)
-  
-  // Reference object positions for orientation validation
-  const LIGHT_SOURCE_POS = new THREE.Vector3(0, 50, 0);  // Always above
-  const BLACK_HOLE_POS = new THREE.Vector3(0, -50, 0);   // Always below
+  // FULL ROTATION LIMITS - Complete freedom of movement
+  const MAX_PITCH = Math.PI / 2;    // 90 degrees - straight up
+  const MIN_PITCH = -Math.PI / 2;   // -90 degrees - straight down
+  // No yaw limits - full 360° horizontal rotation allowed
   
   // Debug state
   const debugCount = useRef(0);
@@ -95,48 +90,38 @@ export default function Player() {
           const prevYaw = yaw.current;
           const prevPitch = pitch.current;
           
-          // UPDATE YAW (horizontal rotation) - with strict bounds to prevent inversion
+          // UPDATE YAW (horizontal rotation) - accumulate without normalization
           yaw.current -= mouseX;
-          yaw.current = Math.max(MIN_YAW, Math.min(MAX_YAW, yaw.current));
           
-          // UPDATE PITCH (vertical rotation) - with strict bounds
+          // UPDATE PITCH (vertical rotation) - 180° range (straight up to straight down)
           pitch.current -= mouseY;
+          
+          // Clamp pitch to prevent over-rotation beyond straight up/down
           pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
           
-          // APPLY ROTATIONS using safe Euler angles with bounds
-          const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
-          camera.quaternion.setFromEuler(euler);
+          // FIRST-PERSON CAMERA ROTATION - proper quaternion order for smooth 360° rotation
+          // Create quaternions for each axis of rotation
+          const yawQuaternion = new THREE.Quaternion();
+          const pitchQuaternion = new THREE.Quaternion();
           
-          // ORIENTATION VALIDATION - Ensure light source is always up, black hole always down
-          const lightSourceScreen = LIGHT_SOURCE_POS.clone().project(camera);
-          const blackHoleScreen = BLACK_HOLE_POS.clone().project(camera);
+          // Yaw around world Y-axis (horizontal mouse movement)
+          yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
           
-          // Check if reference objects are in correct positions
-          const lightIsUp = lightSourceScreen.y > 0;    // Light should be in upper half of screen
-          const blackIsDown = blackHoleScreen.y < 0;    // Black hole should be in lower half of screen
+          // Pitch around local X-axis (vertical mouse movement)  
+          pitchQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch.current);
           
-          // EMERGENCY CORRECTION if orientation is wrong
-          if (!lightIsUp || !blackIsDown) {
-            console.warn('ORIENTATION CORRECTION: Resetting camera to prevent inversion');
-            // Reset to safe position
-            yaw.current = 0;
-            pitch.current = 0;
-            camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
-          }
+          // Combine: Pitch first (local), then Yaw (world) for proper first-person behavior
+          camera.quaternion.multiplyQuaternions(yawQuaternion, pitchQuaternion);
           
-          // DEBUGGING - Log bounds and orientation checks
+          // SIMPLE DEBUGGING - Log every 120 frames to check for issues
           debugCount.current++;
           if (debugCount.current % 120 === 0) {
-            console.log('Bounded camera:', {
+            console.log('Quaternion camera:', {
               angles: { 
                 yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°', 
                 pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°'
               },
-              bounds: {
-                yaw: `${(MIN_YAW * 180 / Math.PI).toFixed(0)}° to ${(MAX_YAW * 180 / Math.PI).toFixed(0)}°`,
-                pitch: `${(MIN_PITCH * 180 / Math.PI).toFixed(0)}° to ${(MAX_PITCH * 180 / Math.PI).toFixed(0)}°`
-              },
-              orientation: { lightIsUp, blackIsDown }
+              mouse: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) }
             });
           }
           
