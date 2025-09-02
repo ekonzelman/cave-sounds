@@ -166,15 +166,15 @@ export default function Cave() {
         <ambientLight intensity={currentSong ? 0.3 : 0.1} color={audioReactiveColors.ambient} />
         {/* Audio-reactive directional light from cave entrance */}
         <directionalLight
-          position={[10, 20, 10]}
+          position={[1000, 2000, 1000]}
           intensity={currentSong ? 0.8 : 0.3}
           color={audioReactiveColors.directional}
         />
         {/* Audio-reactive underground mineral glow */}
         <pointLight
-          position={[0, -5, 0]}
+          position={[0, -500, 0]}
           intensity={currentSong ? 2 : 0.5}
-          distance={currentSong ? 100 : 50}
+          distance={currentSong ? 10000 : 5000}
           color={audioReactiveColors.mineral}
         />
       </>
@@ -193,20 +193,20 @@ export default function Cave() {
       for (let i = 0; i < particleCount; i++) {
         // Generate stable cave-like structure 
         const angle = (i / particleCount) * Math.PI * 4;
-        const radius = 15 + (layerIndex * 10);
-        const height = (i % 15);
+        const radius = 1500 + (layerIndex * 1000);
+        const height = (i % 1500);
         
         // Create stable organic cave shapes
         const noise = Math.sin(angle * 3) * Math.cos(height * 0.1) * 1;
         const caveRadius = radius + noise;
         
         const x = Math.cos(angle) * caveRadius;
-        const y = height - 2 + Math.sin(i * 0.01) * 1; // Reduced noise
+        const y = height - 200 + Math.sin(i * 0.01) * 100; // Massive scale
         const z = Math.sin(angle) * caveRadius;
         
         // Add stable cave features
         if (i % 5 === 0) {
-          const stalactiteHeight = i % 2 === 0 ? 12 : -2;
+          const stalactiteHeight = i % 2 === 0 ? 1200 : -200;
           layerPoints.push(x, stalactiteHeight, z);
         } else {
           layerPoints.push(x, y, z);
@@ -226,9 +226,9 @@ export default function Cave() {
     const colors = new Float32Array(particleCount * 3);
     
     for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = ((i % 100) - 50) * 3;
-      positions[i * 3 + 1] = (i % 20);
-      positions[i * 3 + 2] = ((i % 100) - 50) * 3;
+      positions[i * 3] = ((i % 100) - 50) * 300;
+      positions[i * 3 + 1] = (i % 2000);
+      positions[i * 3 + 2] = ((i % 100) - 50) * 300;
       
       // Fluorescent colors
       const colorChoice = i % 4;
@@ -358,13 +358,13 @@ export default function Cave() {
                 position={[0, 0, 0]}
                 color={obj.color}
                 intensity={currentSong ? 2 : 0.5}
-                distance={10}
+                distance={1000}
               />
             )}
             
             {/* Add a visible marker for debugging */}
-            <mesh position={[0, 2, 0]}>
-              <sphereGeometry args={[0.1]} />
+            <mesh position={[0, 200, 0]}>
+              <sphereGeometry args={[10]} />
               <meshBasicMaterial color="#ff0000" />
             </mesh>
           </group>
@@ -374,16 +374,16 @@ export default function Cave() {
       {/* Realistic Stalactites - hanging from ceiling */}
       {[...Array(15)].map((_, i) => {
         const angle = (i / 15) * Math.PI * 2;
-        const radius = 25;
+        const radius = 2500;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const height = 4;
+        const height = 400;
         
         return (
-          <group key={`stalactite-${i}`} position={[x, 15, z]}>
+          <group key={`stalactite-${i}`} position={[x, 1500, z]}>
             {/* Main stalactite body */}
             <mesh>
-              <coneGeometry args={[0.5, height, 8]} />
+              <coneGeometry args={[50, height, 8]} />
               <meshBasicMaterial
                 color={currentSong ? `hsl(${((Date.now() * 0.05 + i * 30) % 360)}, 60%, 70%)` : "#e6d7c3"}
                 transparent
@@ -392,7 +392,7 @@ export default function Cave() {
             </mesh>
             {/* Mineral deposits */}
             <mesh position={[0, -height/2, 0]}>
-              <sphereGeometry args={[0.15, 8, 8]} />
+              <sphereGeometry args={[15, 8, 8]} />
               <meshBasicMaterial
                 color="hsl(200, 70%, 70%)"
                 transparent
@@ -406,16 +406,16 @@ export default function Cave() {
       {/* Realistic Stalagmites - rising from floor */}
       {[...Array(12)].map((_, i) => {
         const angle = (i / 12) * Math.PI * 2;
-        const radius = 30;
+        const radius = 3000;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const height = 3;
+        const height = 300;
         
         return (
-          <group key={`stalagmite-${i}`} position={[x, -2, z]}>
+          <group key={`stalagmite-${i}`} position={[x, -200, z]}>
             {/* Main stalagmite body */}
             <mesh>
-              <coneGeometry args={[0.6, height, 8]} />
+              <coneGeometry args={[60, height, 8]} />
               <meshBasicMaterial
                 color={currentSong ? `hsl(${((Date.now() * 0.03 + i * 45) % 360)}, 70%, 60%)` : "#d4c4a0"}
                 transparent
@@ -424,7 +424,7 @@ export default function Cave() {
             </mesh>
             {/* Colorful mineral veins */}
             <mesh position={[0, height/2, 0]} scale={[1.1, 0.1, 1.1]}>
-              <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
+              <cylinderGeometry args={[30, 30, 10, 16]} />
               <meshBasicMaterial
                 color="hsl(60, 80%, 60%)"
                 transparent
@@ -438,21 +438,21 @@ export default function Cave() {
       {/* Flowstone formations - bacon-like layered structures */}
       {[...Array(8)].map((_, i) => {
         const angle = (i / 8) * Math.PI * 2;
-        const radius = 25;
+        const radius = 2500;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`flowstone-${i}`} position={[x, 7, z]}>
+          <group key={`flowstone-${i}`} position={[x, 700, z]}>
             {/* Multiple layers of flowstone */}
             {[...Array(5)].map((_, layer) => (
               <mesh
                 key={layer}
-                position={[0, -layer * 0.3, 0]}
+                position={[0, -layer * 30, 0]}
                 rotation={[0, 0, 0]}
-                scale={[2 + layer * 0.2, 0.1, 1.5 + layer * 0.1]}
+                scale={[200 + layer * 20, 10, 150 + layer * 10]}
               >
-                <cylinderGeometry args={[1, 1.2, 0.2, 16]} />
+                <cylinderGeometry args={[100, 120, 20, 16]} />
                 <meshBasicMaterial
                   color={`hsl(${20 + layer * 10}, 60%, ${60 + layer * 5}%)`}
                   transparent
@@ -467,15 +467,15 @@ export default function Cave() {
       {/* Aragonite crystal formations - branching structures */}
       {[...Array(6)].map((_, i) => {
         const angle = (i / 6) * Math.PI * 2;
-        const radius = 35;
+        const radius = 3500;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`aragonite-${i}`} position={[x, 4, z]}>
+          <group key={`aragonite-${i}`} position={[x, 400, z]}>
             {/* Main crystal trunk */}
             <mesh>
-              <cylinderGeometry args={[0.1, 0.2, 2, 6]} />
+              <cylinderGeometry args={[10, 20, 200, 6]} />
               <meshBasicMaterial
                 color="#e8f4f8"
                 transparent
@@ -485,16 +485,16 @@ export default function Cave() {
             {/* Crystal branches */}
             {[...Array(4)].map((_, branch) => {
               const branchAngle = (branch / 8) * Math.PI * 2;
-              const branchX = Math.cos(branchAngle) * 0.8;
-              const branchZ = Math.sin(branchAngle) * 0.8;
+              const branchX = Math.cos(branchAngle) * 80;
+              const branchZ = Math.sin(branchAngle) * 80;
               
               return (
                 <mesh
                   key={branch}
-                  position={[branchX, 1, branchZ]}
+                  position={[branchX, 100, branchZ]}
                   rotation={[0.2, branchAngle, 0.3]}
                 >
-                  <cylinderGeometry args={[0.05, 0.1, 1.2, 6]} />
+                  <cylinderGeometry args={[5, 10, 120, 6]} />
                   <meshBasicMaterial
                     color="hsl(200, 50%, 80%)"
                     transparent
@@ -505,9 +505,9 @@ export default function Cave() {
             })}
             {/* Crystal tips with glow */}
             <pointLight
-              position={[0, 1.5, 0]}
+              position={[0, 150, 0]}
               intensity={2}
-              distance={8}
+              distance={800}
               color="#4dd0e1"
             />
           </group>
@@ -517,16 +517,16 @@ export default function Cave() {
       {/* Conulite formations - circular spiral patterns */}
       {[...Array(6)].map((_, i) => {
         const angle = (i / 6) * Math.PI * 2;
-        const radius = 35;
+        const radius = 3500;
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         
         return (
-          <group key={`conulite-${i}`} position={[x, 5, z]}>
+          <group key={`conulite-${i}`} position={[x, 500, z]}>
             {/* Spiral rings */}
             {[...Array(6)].map((_, ring) => {
-              const ringRadius = 0.3 + ring * 0.15;
-              const ringHeight = ring * 0.1;
+              const ringRadius = 30 + ring * 15;
+              const ringHeight = ring * 10;
               
               return (
                 <mesh
@@ -534,7 +534,7 @@ export default function Cave() {
                   position={[0, ringHeight, 0]}
                   rotation={[0, ring * 0.3, 0]}
                 >
-                  <torusGeometry args={[ringRadius, 0.03, 4, 16]} />
+                  <torusGeometry args={[ringRadius, 3, 4, 16]} />
                   <meshBasicMaterial
                     color={`hsl(${40 + ring * 5}, 70%, 65%)`}
                     transparent
@@ -545,9 +545,9 @@ export default function Cave() {
             })}
             {/* Center glow */}
             <pointLight
-              position={[0, 0.6, 0]}
+              position={[0, 60, 0]}
               intensity={1.5}
-              distance={6}
+              distance={600}
               color="#ffa726"
             />
           </group>
@@ -556,7 +556,7 @@ export default function Cave() {
       
       {/* Layer revelation hint */}
       {revealedLayers < 5 && (
-        <mesh position={[0, 1, 0]} visible={false}>
+        <mesh position={[0, 100, 0]} visible={false}>
           <sphereGeometry args={[200, 16, 16]} />
           <meshBasicMaterial transparent opacity={0} />
         </mesh>
@@ -564,9 +564,9 @@ export default function Cave() {
       
       {/* ORIENTATION REFERENCE OBJECTS */}
       {/* AUDIO-REACTIVE Light source at the TOP - bright colors pulse with music */}
-      <group position={[0, 50, 0]}>
+      <group position={[0, 5000, 0]}>
         <mesh>
-          <sphereGeometry args={[2, 16, 16]} />
+          <sphereGeometry args={[200, 16, 16]} />
           <meshStandardMaterial 
             color={referenceObjectColors.lightSource.core} 
             emissive={referenceObjectColors.lightSource.emissive} 
@@ -575,15 +575,15 @@ export default function Cave() {
         </mesh>
         <pointLight
           intensity={referenceObjectColors.lightSource.intensity}
-          distance={100}
+          distance={10000}
           color={referenceObjectColors.lightSource.lightColor}
         />
         {/* Audio-reactive light rays effect */}
         {[...Array(8)].map((_, i) => {
           const angle = (i / 8) * Math.PI * 2;
           return (
-            <mesh key={i} rotation={[0, angle, 0]} position={[Math.cos(angle) * 3, 0, Math.sin(angle) * 3]}>
-              <cylinderGeometry args={[0.05, 0.05, 6]} />
+            <mesh key={i} rotation={[0, angle, 0]} position={[Math.cos(angle) * 300, 0, Math.sin(angle) * 300]}>
+              <cylinderGeometry args={[5, 5, 600]} />
               <meshBasicMaterial 
                 color={referenceObjectColors.lightSource.lightColor} 
                 transparent 
@@ -596,7 +596,7 @@ export default function Cave() {
         {/* Additional pulsing light rings for dramatic effect */}
         {currentSong && [...Array(3)].map((_, i) => (
           <mesh key={`light-ring-${i}`} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[4 + i * 2, 0.2, 8, 32]} />
+            <torusGeometry args={[400 + i * 200, 20, 8, 32]} />
             <meshBasicMaterial 
               color={referenceObjectColors.lightSource.lightColor}
               transparent 
@@ -607,23 +607,23 @@ export default function Cave() {
       </group>
       
       {/* AUDIO-REACTIVE Black hole at the BOTTOM - dark colors pulse with music */}
-      <group position={[0, -50, 0]}>
+      <group position={[0, -5000, 0]}>
         <mesh>
-          <sphereGeometry args={[2.5, 16, 16]} />
+          <sphereGeometry args={[250, 16, 16]} />
           <meshStandardMaterial color={referenceObjectColors.blackHole.core} emissive={referenceObjectColors.blackHole.core} />
         </mesh>
         
         {/* Audio-reactive dark glow */}
         <pointLight
           intensity={referenceObjectColors.blackHole.intensity}
-          distance={30}
+          distance={3000}
           color={referenceObjectColors.blackHole.lightColor}
         />
         
         {/* Audio-reactive accretion disk effect */}
         {[...Array(3)].map((_, i) => (
           <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[3 + i * 1.5, 0.1, 4, 32]} />
+            <torusGeometry args={[300 + i * 150, 10, 4, 32]} />
             <meshBasicMaterial 
               color={referenceObjectColors.blackHole.accretion[i]} 
               transparent 
@@ -635,7 +635,7 @@ export default function Cave() {
         {/* Additional dark energy rings when music is playing */}
         {currentSong && [...Array(2)].map((_, i) => (
           <mesh key={`dark-ring-${i}`} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[8 + i * 3, 0.3, 6, 16]} />
+            <torusGeometry args={[800 + i * 300, 30, 6, 16]} />
             <meshBasicMaterial 
               color={referenceObjectColors.blackHole.accretion[0]}
               transparent 
