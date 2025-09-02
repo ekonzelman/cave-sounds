@@ -29,7 +29,7 @@ export default function Player() {
   const lastFootstepTime = useRef(0);
   
   // Mouse look state
-  const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
+  const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ')); // YXZ order prevents gimbal lock
   const [isPointerLocked, setIsPointerLocked] = useState(false);
 
   // Set initial camera position and setup pointer lock
@@ -53,16 +53,41 @@ export default function Player() {
       if (document.pointerLockElement === document.body) {
         try {
           const sensitivity = 0.0015; // Slightly reduced sensitivity for smoother control
+          
+          // Get current euler angles
           euler.current.setFromQuaternion(camera.quaternion);
+          
+          // Apply horizontal rotation (yaw) - no limits needed
           euler.current.y -= event.movementX * sensitivity;
+          
+          // Apply vertical rotation (pitch) with strict limits
           euler.current.x -= event.movementY * sensitivity;
           
-          // More restrictive vertical limits to prevent disorienting flipping
-          // Limit to about ±70 degrees instead of ±90 degrees for comfort
-          const maxPitch = Math.PI * 0.39; // ~70 degrees
-          euler.current.x = Math.max(-maxPitch, Math.min(maxPitch, euler.current.x));
+          // CRITICAL: Clamp vertical rotation to prevent upside-down flipping
+          // Limit to ±85 degrees to prevent gimbal lock and maintain proper orientation
+          const maxPitch = Math.PI * 0.47; // ~85 degrees (just under 90°)
+          const minPitch = -maxPitch;
+          euler.current.x = Math.max(minPitch, Math.min(maxPitch, euler.current.x));
           
+          // Ensure Z rotation stays at 0 to prevent camera roll
+          euler.current.z = 0;
+          
+          // Apply the rotation with YXZ order to maintain proper up vector
           camera.quaternion.setFromEuler(euler.current);
+          
+          // Double-check and enforce up vector to prevent any residual flipping
+          const worldUp = new THREE.Vector3(0, 1, 0);
+          const cameraUp = new THREE.Vector3(0, 1, 0);
+          cameraUp.applyQuaternion(camera.quaternion);
+          
+          // If camera is flipped (up vector pointing down), correct it
+          if (cameraUp.y < 0) {
+            console.warn('Camera flip detected, correcting orientation');
+            // Reset to a safe forward-looking position
+            euler.current.set(0, euler.current.y, 0);
+            camera.quaternion.setFromEuler(euler.current);
+          }
+          
         } catch (error) {
           console.warn('Mouse look error:', error);
           // Exit pointer lock if there's an error
