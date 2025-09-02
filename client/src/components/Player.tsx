@@ -28,23 +28,30 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Mouse look state - track angles directly for smoother movement
-  const pitch = useRef(0); // X rotation (up/down)
-  const yaw = useRef(0);   // Y rotation (left/right)
+  // Floor-anchored camera system - no more gimbal lock or flipping!
+  const cameraForward = useRef(new THREE.Vector3(0, 0, -1)); // Initial forward direction
+  const cameraRight = useRef(new THREE.Vector3(1, 0, 0));    // Initial right direction
+  const worldUp = useRef(new THREE.Vector3(0, 1, 0));        // World up direction (floor normal)
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  // Smoothing state for mouse movement
-  const lastMouseTime = useRef(0);
+  // Cave floor level for anchoring
+  const FLOOR_LEVEL = -10;
 
   // Set initial camera position and setup pointer lock
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
     
-    // Initialize mouse look angles from current camera rotation
-    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-    pitch.current = euler.x;
-    yaw.current = euler.y;
-    lastMouseTime.current = performance.now();
+    // Initialize camera vectors from current camera orientation
+    camera.getWorldDirection(cameraForward.current);
+    cameraForward.current.normalize();
+    
+    // Calculate right vector from forward and world up
+    cameraRight.current.crossVectors(cameraForward.current, worldUp.current);
+    cameraRight.current.normalize();
+    
+    // Ensure we're grounded to the floor
+    cameraForward.current.y = 0; // Project forward onto floor plane
+    cameraForward.current.normalize();
     
     // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -62,47 +69,57 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          // Smoother sensitivity with frame-rate independence  
-          const sensitivity = 0.0012; // Reduced for smoother movement
+          // Floor-anchored camera system - stable and grounded!
+          const sensitivity = 0.002; // Smooth sensitivity
           
-          // Apply mouse movement directly to pitch/yaw for smoother control
           const mouseX = event.movementX * sensitivity;
           const mouseY = event.movementY * sensitivity;
           
-          // Update yaw (left/right) with normalization to prevent flipping
-          yaw.current -= mouseX;
-          
-          // CRITICAL: Normalize yaw to prevent numerical issues and flipping
-          // Keep yaw within -π to π range for stability
-          if (yaw.current > Math.PI) {
-            yaw.current -= 2 * Math.PI;
-          } else if (yaw.current < -Math.PI) {
-            yaw.current += 2 * Math.PI;
+          // HORIZONTAL ROTATION (left/right) - rotate around world up axis
+          if (Math.abs(mouseX) > 0.001) {
+            const rotationMatrix = new THREE.Matrix4();
+            rotationMatrix.makeRotationAxis(worldUp.current, -mouseX);
+            
+            // Rotate forward and right vectors around world up
+            cameraForward.current.applyMatrix4(rotationMatrix);
+            cameraRight.current.crossVectors(cameraForward.current, worldUp.current);
+            cameraRight.current.normalize();
           }
           
-          // Update pitch (up/down) with smooth clamping
-          const targetPitch = pitch.current - mouseY;
-          const maxPitch = Math.PI * 0.44; // ~80 degrees for comfort
-          
-          // Smooth exponential clamping to prevent sudden boundary jumps
-          const dampingFactor = 0.95;
-          if (targetPitch > maxPitch) {
-            pitch.current = maxPitch * dampingFactor + pitch.current * (1 - dampingFactor);
-          } else if (targetPitch < -maxPitch) {
-            pitch.current = -maxPitch * dampingFactor + pitch.current * (1 - dampingFactor);
-          } else {
-            pitch.current = targetPitch;
+          // VERTICAL ROTATION (up/down) - rotate around right axis with limits
+          if (Math.abs(mouseY) > 0.001) {
+            const rotationMatrix = new THREE.Matrix4();
+            rotationMatrix.makeRotationAxis(cameraRight.current, -mouseY);
+            
+            // Calculate new forward direction
+            const newForward = cameraForward.current.clone();
+            newForward.applyMatrix4(rotationMatrix);
+            
+            // Check if this rotation would flip us upside-down
+            // Limit vertical angle to prevent looking too far up/down
+            const maxVerticalAngle = 0.8; // ~45 degrees up/down from horizontal
+            
+            if (Math.abs(newForward.y) < maxVerticalAngle) {
+              cameraForward.current.copy(newForward);
+              cameraForward.current.normalize();
+            }
           }
           
-          // Create clean euler rotation from our tracked angles
-          const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
-          camera.quaternion.setFromEuler(euler);
+          // CONSTRUCT CAMERA MATRIX from our stable vectors
+          // This ensures the camera never flips and stays grounded
+          const lookAtMatrix = new THREE.Matrix4();
+          const cameraPosition = camera.position.clone();
+          const targetPosition = cameraPosition.clone().add(cameraForward.current);
+          
+          lookAtMatrix.lookAt(cameraPosition, targetPosition, worldUp.current);
+          camera.matrix.copy(lookAtMatrix);
+          camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
           
         } catch (error) {
           console.warn('Mouse look error:', error);
-          // Reset angles on error
-          pitch.current = 0;
-          yaw.current = 0;
+          // Reset to safe forward direction
+          cameraForward.current.set(0, 0, -1);
+          cameraRight.current.set(1, 0, 0);
           if (document.exitPointerLock) {
             document.exitPointerLock();
           }
