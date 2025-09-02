@@ -26,6 +26,7 @@ export default function AudioVisualizer({ visualizationFilter }: AudioVisualizer
   const particleCount = 1000; // Much more particles for dramatic effect
   const currentFilter = visualizationFilter || storeFilter;
   
+  
 
   // Dynamic particles for audio visualization
   const particles = useMemo(() => {
