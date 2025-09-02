@@ -99,16 +99,19 @@ export default function Player() {
           // Clamp pitch to prevent over-rotation beyond straight up/down
           pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
           
-          // ROBUST ROTATION APPLICATION using separate quaternions to avoid gimbal lock
-          // Create separate quaternions for yaw and pitch then combine them
+          // FIRST-PERSON CAMERA ROTATION - proper quaternion order for smooth 360° rotation
+          // Create quaternions for each axis of rotation
           const yawQuaternion = new THREE.Quaternion();
+          const pitchQuaternion = new THREE.Quaternion();
+          
+          // Yaw around world Y-axis (horizontal mouse movement)
           yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
           
-          const pitchQuaternion = new THREE.Quaternion();
+          // Pitch around local X-axis (vertical mouse movement)  
           pitchQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch.current);
           
-          // Combine rotations: apply yaw first (around world Y), then pitch (around local X)
-          camera.quaternion.copy(yawQuaternion).multiply(pitchQuaternion);
+          // Combine: Pitch first (local), then Yaw (world) for proper first-person behavior
+          camera.quaternion.multiplyQuaternions(yawQuaternion, pitchQuaternion);
           
           // SIMPLE DEBUGGING - Log every 120 frames to check for issues
           debugCount.current++;
