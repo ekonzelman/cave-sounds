@@ -73,7 +73,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: nanoid(),
         title,
         filename: req.file.filename,
-        position,
+        positionX: position[0],
+        positionY: position[1], 
+        positionZ: position[2],
         discovered: false,
         uploadedAt: new Date().toISOString()
       };
@@ -96,6 +98,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching songs:', error);
       res.status(500).json({ error: 'Failed to fetch songs' });
+    }
+  });
+
+  // Update song position
+  app.put('/api/songs/:id/position', async (req, res) => {
+    try {
+      const songId = req.params.id;
+      const { positionX, positionY, positionZ } = req.body;
+      
+      await storage.updateSongPosition(songId, { positionX, positionY, positionZ });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating song position:', error);
+      res.status(500).json({ error: 'Failed to update song position' });
     }
   });
 

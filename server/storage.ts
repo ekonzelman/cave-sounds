@@ -6,8 +6,8 @@ import type { SongNode, CaveObjectNode } from "@shared/schema";
 
 // Database connection
 const connectionString = process.env.DATABASE_URL!;
-const sql = neon(connectionString);
-const db = drizzle(sql);
+const client = neon(connectionString);
+const db = drizzle(client);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -21,6 +21,7 @@ export interface IStorage {
   deleteSong(id: string): Promise<void>;
   updateSongDiscovery(id: string, discovered: boolean): Promise<void>;
   updateSongCustomization(id: string, customization: Partial<Pick<Song, 'nodeShape' | 'nodeSize' | 'nodeColor' | 'glowIntensity' | 'animationStyle'>>): Promise<void>;
+  updateSongPosition(id: string, position: { positionX: number; positionY: number; positionZ: number }): Promise<void>;
   
   // Cave object methods
   getAllCaveObjects(): Promise<CaveObjectNode[]>;
@@ -41,6 +42,39 @@ export class MemStorage implements IStorage {
     this.songsMap = new Map();
     this.caveObjectsMap = new Map();
     this.currentId = 1;
+    
+    // Initialize with existing songs as fallback
+    this.songsMap.set('test-song-1', {
+      id: 'test-song-1',
+      title: 'Oak Seeds-03.1',
+      filename: 'wUIfNzDCH0UklFkdRWwR_-1756783261634.mp3',
+      positionX: 12.5,
+      positionY: 1.8,
+      positionZ: -7.2,
+      discovered: false,
+      uploadedAt: new Date(),
+      nodeShape: 'sphere',
+      nodeSize: 1.0,
+      nodeColor: '#ff00ff',
+      glowIntensity: 1.0,
+      animationStyle: 'pulse'
+    });
+    
+    this.songsMap.set('test-song-2', {
+      id: 'test-song-2',
+      title: 'Trying to Tell Me 06',
+      filename: 'XCZ-wx1Jwzym-3Q6_s8KM-1756783285160.mp3',
+      positionX: -15.3,
+      positionY: 2.1,
+      positionZ: 9.8,
+      discovered: false,
+      uploadedAt: new Date(),
+      nodeShape: 'sphere',
+      nodeSize: 1.0,
+      nodeColor: '#ff00ff',
+      glowIntensity: 1.0,
+      animationStyle: 'pulse'
+    });
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -135,6 +169,19 @@ export class MemStorage implements IStorage {
       const song = this.songsMap.get(id);
       if (song) {
         this.songsMap.set(id, { ...song, ...customization });
+      }
+    }
+  }
+
+  async updateSongPosition(id: string, position: { positionX: number; positionY: number; positionZ: number }): Promise<void> {
+    try {
+      await db.update(songs).set(position).where(eq(songs.id, id));
+    } catch (error) {
+      console.error('Error updating song position in database:', error);
+      // Fallback to in-memory storage
+      const song = this.songsMap.get(id);
+      if (song) {
+        this.songsMap.set(id, { ...song, ...position });
       }
     }
   }
