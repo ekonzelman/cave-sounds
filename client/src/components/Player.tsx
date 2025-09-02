@@ -28,15 +28,19 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Bulletproof camera system with absolute floor/ceiling constraints
-  const yaw = useRef(0);   // Horizontal rotation (left/right) - unlimited rotation allowed
-  const pitch = useRef(0); // Vertical rotation (up/down) - strictly limited to prevent flipping
+  // Ultra-safe camera system with BOTH horizontal and vertical limits
+  const yaw = useRef(0);   // Horizontal rotation (left/right) - LIMITED to prevent spinning
+  const pitch = useRef(0); // Vertical rotation (up/down) - LIMITED to prevent flipping
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  // Absolute constraints - these values make flipping impossible
-  const MAX_PITCH = Math.PI / 3; // 60 degrees up
-  const MIN_PITCH = -Math.PI / 3; // 60 degrees down
-  const WORLD_UP = new THREE.Vector3(0, 1, 0); // Floor normal - never changes
+  // STRICT LIMITS - both horizontal and vertical to prevent ANY flipping
+  const MAX_PITCH = Math.PI / 4;    // 45 degrees up (safer than 60)
+  const MIN_PITCH = -Math.PI / 4;   // 45 degrees down (safer than 60)
+  const MAX_YAW = Math.PI * 0.75;   // 135 degrees left (3/4 turn)
+  const MIN_YAW = -Math.PI * 0.75;  // 135 degrees right (3/4 turn)
+  
+  // Debug state
+  const debugCount = useRef(0);
 
   // Set initial camera position and setup pointer lock
   useEffect(() => {
@@ -54,6 +58,15 @@ export default function Player() {
       } else if (event.key === 'Escape' && isPointerLocked) {
         document.exitPointerLock();
       }
+      
+      // EMERGENCY CAMERA RESET - Press R to reset camera to safe position
+      if ((event.key === 'r' || event.key === 'R') && isPointerLocked) {
+        console.log('Manual camera reset triggered - resetting to safe position');
+        pitch.current = 0;
+        yaw.current = 0;
+        camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
+        console.log('Camera reset complete: yaw=0°, pitch=0°');
+      }
     };
     
     const handlePointerLockChange = () => {
@@ -63,46 +76,79 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          // BULLETPROOF camera system with absolute constraints
+          // ULTRA-SAFE camera system with comprehensive debugging
           const sensitivity = 0.002;
           
           const mouseX = event.movementX * sensitivity;
           const mouseY = event.movementY * sensitivity;
           
-          // UPDATE YAW (horizontal rotation) - allow unlimited rotation
-          yaw.current -= mouseX;
+          // Store previous values for debugging
+          const prevYaw = yaw.current;
+          const prevPitch = pitch.current;
           
-          // Keep yaw normalized to prevent numerical issues
-          while (yaw.current > Math.PI) yaw.current -= 2 * Math.PI;
-          while (yaw.current < -Math.PI) yaw.current += 2 * Math.PI;
+          // UPDATE YAW (horizontal rotation) - NOW LIMITED!
+          let newYaw = yaw.current - mouseX;
           
-          // UPDATE PITCH (vertical rotation) - ABSOLUTE LIMITS prevent flipping
-          pitch.current -= mouseY;
+          // CLAMP YAW to prevent excessive horizontal spinning
+          newYaw = Math.max(MIN_YAW, Math.min(MAX_YAW, newYaw));
+          yaw.current = newYaw;
           
-          // CRITICAL: Clamp pitch to absolute safe values - NO EXCEPTIONS!
-          pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
+          // UPDATE PITCH (vertical rotation) - STRICT LIMITS
+          let newPitch = pitch.current - mouseY;
+          
+          // CLAMP PITCH to prevent any upside-down flipping
+          newPitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, newPitch));
+          pitch.current = newPitch;
+          
+          // COMPREHENSIVE DEBUGGING - Log every 30 frames
+          debugCount.current++;
+          if (debugCount.current % 30 === 0) {
+            console.log('CAMERA DEBUG:', {
+              mouseInput: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) },
+              angles: { 
+                yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°',
+                pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°'
+              },
+              limits: {
+                yawRange: `${(MIN_YAW * 180 / Math.PI).toFixed(0)}° to ${(MAX_YAW * 180 / Math.PI).toFixed(0)}°`,
+                pitchRange: `${(MIN_PITCH * 180 / Math.PI).toFixed(0)}° to ${(MAX_PITCH * 180 / Math.PI).toFixed(0)}°`
+              },
+              clamped: {
+                yaw: prevYaw !== yaw.current,
+                pitch: prevPitch !== pitch.current
+              }
+            });
+          }
           
           // APPLY ROTATIONS using safe Euler angles
-          // The clamped pitch makes upside-down flipping impossible
           const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
           camera.quaternion.setFromEuler(euler);
           
-          // VERIFY: Ensure camera up vector is always pointing up
-          // This is a safety check - should never be needed with proper clamping
+          // TRIPLE VERIFICATION: Check camera orientation
           const cameraUp = new THREE.Vector3(0, 1, 0);
           cameraUp.applyQuaternion(camera.quaternion);
+          const cameraForward = new THREE.Vector3(0, 0, -1);
+          cameraForward.applyQuaternion(camera.quaternion);
           
-          if (cameraUp.y < 0.1) {
-            // Emergency correction: reset to safe angles
-            console.warn('Emergency camera correction - angles were:', pitch.current, yaw.current);
+          // Emergency detection and correction
+          if (cameraUp.y < 0.5) { // Camera is getting close to upside-down
+            console.error('CAMERA FLIP DETECTED!', {
+              cameraUp: { x: cameraUp.x.toFixed(3), y: cameraUp.y.toFixed(3), z: cameraUp.z.toFixed(3) },
+              cameraForward: { x: cameraForward.x.toFixed(3), y: cameraForward.y.toFixed(3), z: cameraForward.z.toFixed(3) },
+              angles: { yaw: yaw.current, pitch: pitch.current },
+              euler: { x: euler.x, y: euler.y, z: euler.z }
+            });
+            
+            // EMERGENCY RESET - force to safe position
             pitch.current = 0;
             yaw.current = 0;
             camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
+            console.log('Emergency reset applied');
           }
           
         } catch (error) {
-          console.warn('Mouse look error:', error);
-          // Reset to safe state
+          console.error('Mouse look error:', error);
+          // Complete reset on any error
           pitch.current = 0;
           yaw.current = 0;
           camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
