@@ -26,6 +26,11 @@ export default function AudioVisualizer({ visualizationFilter }: AudioVisualizer
   const particleCount = 1000; // Much more particles for dramatic effect
   const currentFilter = visualizationFilter || storeFilter;
   
+  // Log when filter changes
+  useEffect(() => {
+    console.log('AudioVisualizer filter changed to:', currentFilter);
+  }, [currentFilter]);
+  
   
 
   // Dynamic particles for audio visualization
@@ -109,7 +114,12 @@ export default function AudioVisualizer({ visualizationFilter }: AudioVisualizer
       const normalizedAudio = audioValue / 255;
       
       // Apply different animations based on currentFilter
-      switch (currentFilter) {
+      // Get the current filter value directly from the store to avoid stale closures
+      const activeFilter = visualizationFilter || useMusicExplorer.getState().visualizationFilter;
+      if (i === 0) {
+        console.log('Applying filter:', activeFilter, 'to first bar');
+      }
+      switch (activeFilter) {
         case 'wave':
           // Wave Motion - bars move in undulating wave pattern
           const waveOffset = Math.sin(currentTime * 2 + i * 0.3) * 8;
