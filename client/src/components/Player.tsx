@@ -79,8 +79,8 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          // SMOOTH camera system - reduced velocity (2x slower) with easing
-          const sensitivity = 0.001; // REDUCED: Half the previous sensitivity for 2x slower movement
+          // SMOOTH camera system - tuned velocity with easing
+          const sensitivity = 0.0015; // BALANCED: Sweet spot between responsiveness and smoothness
           
           // Cap mouse deltas to prevent extreme jumps
           const maxDelta = 0.025; // Also reduced for smoother movement
