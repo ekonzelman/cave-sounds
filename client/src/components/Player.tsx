@@ -69,8 +69,16 @@ export default function Player() {
           const mouseX = event.movementX * sensitivity;
           const mouseY = event.movementY * sensitivity;
           
-          // Update yaw (left/right) - unlimited horizontal rotation
+          // Update yaw (left/right) with normalization to prevent flipping
           yaw.current -= mouseX;
+          
+          // CRITICAL: Normalize yaw to prevent numerical issues and flipping
+          // Keep yaw within -π to π range for stability
+          if (yaw.current > Math.PI) {
+            yaw.current -= 2 * Math.PI;
+          } else if (yaw.current < -Math.PI) {
+            yaw.current += 2 * Math.PI;
+          }
           
           // Update pitch (up/down) with smooth clamping
           const targetPitch = pitch.current - mouseY;
