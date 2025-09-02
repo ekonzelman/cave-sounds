@@ -121,9 +121,19 @@ export const useMusicExplorer = create<MusicExplorerState>()(
     },
 
     addSongNode: (node) => {
-      set((state) => ({
-        songNodes: [...state.songNodes, node]
-      }));
+      set((state) => {
+        // Check if node already exists to prevent duplicates
+        const existingNode = state.songNodes.find(n => n.id === node.id);
+        if (existingNode) {
+          console.log('Song node already exists, skipping duplicate:', node.id);
+          return state; // Return unchanged state
+        }
+        
+        console.log('Adding new song node:', node);
+        return {
+          songNodes: [...state.songNodes, node]
+        };
+      });
     },
 
     discoverSongNode: (nodeId) => {
@@ -272,6 +282,14 @@ export const useMusicExplorer = create<MusicExplorerState>()(
         };
 
         get().addSongNode(newNode);
+        
+        // Refresh the entire song list to ensure synchronization
+        // This handles both database and in-memory storage scenarios
+        setTimeout(() => {
+          get().initializeDefaultSongs();
+        }, 500);
+        
+        console.log('Song uploaded successfully:', newNode);
       } catch (error) {
         console.error('Upload error:', error);
         throw error;
@@ -300,21 +318,51 @@ export const useMusicExplorer = create<MusicExplorerState>()(
     },
 
     initializeDefaultSongs: () => {
-      // Initialize with empty array first to prevent map errors
-      set({ songNodes: [] });
+      console.log('Initializing songs...');
       
       // Load existing songs from the server
       fetch('/api/songs')
         .then(response => response.json())
         .then(songs => {
-          console.log('Loaded songs from server:', songs);
+          console.log('Loaded songs from server:', songs.length, 'songs');
           // Ensure we have an array
           const songList = Array.isArray(songs) ? songs : [];
-          set({ songNodes: songList });
+          
+          // If no songs from server, use defaults
+          if (songList.length === 0) {
+            const defaultSongs: SongNode[] = [
+              {
+                id: 'default-1',
+                title: 'Cave Ambience',
+                filename: 'background.mp3',
+                position: [10, 1, 5],
+                discovered: false
+              },
+              {
+                id: 'default-2',
+                title: 'Mystery Echo',
+                filename: 'hit.mp3',
+                position: [-8, 1, -12],
+                discovered: false
+              },
+              {
+                id: 'default-3',
+                title: 'Discovery Sound',
+                filename: 'success.mp3',
+                position: [15, 1, -8],
+                discovered: false
+              }
+            ];
+            console.log('Using default songs:', defaultSongs.length);
+            set({ songNodes: defaultSongs });
+          } else {
+            console.log('Setting song nodes from server:', songList.map(s => s.title));
+            set({ songNodes: songList });
+          }
         })
         .catch(error => {
-          console.error('Error loading songs:', error);
-          // Add default songs if server fails
+          console.error('Error loading songs from server:', error);
+          // Add default songs if server fails completely
           const defaultSongs: SongNode[] = [
             {
               id: 'default-1',
@@ -338,6 +386,7 @@ export const useMusicExplorer = create<MusicExplorerState>()(
               discovered: false
             }
           ];
+          console.log('Falling back to default songs due to server error');
           set({ songNodes: defaultSongs });
         });
     },
