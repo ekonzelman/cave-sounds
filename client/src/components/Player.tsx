@@ -28,36 +28,24 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Floor-anchored camera system - no more gimbal lock or flipping!
-  const cameraForward = useRef(new THREE.Vector3(0, 0, -1)); // Initial forward direction
-  const cameraRight = useRef(new THREE.Vector3(1, 0, 0));    // Initial right direction
-  const worldUp = useRef(new THREE.Vector3(0, 1, 0));        // World up direction (floor normal)
+  // Bulletproof camera system with absolute floor/ceiling constraints
+  const yaw = useRef(0);   // Horizontal rotation (left/right) - unlimited rotation allowed
+  const pitch = useRef(0); // Vertical rotation (up/down) - strictly limited to prevent flipping
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  // Track horizontal rotation for limits
-  const horizontalAngle = useRef(0); // Track total horizontal rotation
-  
-  // Cave floor level for anchoring
-  const FLOOR_LEVEL = -10;
+  // Absolute constraints - these values make flipping impossible
+  const MAX_PITCH = Math.PI / 3; // 60 degrees up
+  const MIN_PITCH = -Math.PI / 3; // 60 degrees down
+  const WORLD_UP = new THREE.Vector3(0, 1, 0); // Floor normal - never changes
 
   // Set initial camera position and setup pointer lock
   useEffect(() => {
     camera.position.set(playerPosition.x, playerPosition.y + 2, playerPosition.z);
     
-    // Initialize camera vectors from current camera orientation
-    camera.getWorldDirection(cameraForward.current);
-    cameraForward.current.normalize();
-    
-    // Calculate right vector from forward and world up
-    cameraRight.current.crossVectors(cameraForward.current, worldUp.current);
-    cameraRight.current.normalize();
-    
-    // Ensure we're grounded to the floor
-    cameraForward.current.y = 0; // Project forward onto floor plane
-    cameraForward.current.normalize();
-    
-    // Initialize horizontal angle tracking
-    horizontalAngle.current = 0;
+    // Initialize camera angles from current orientation
+    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    yaw.current = euler.y;
+    pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, euler.x)); // Clamp initial pitch
     
     // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -75,78 +63,49 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          // Floor-anchored camera system - stable and grounded!
-          const sensitivity = 0.002; // Smooth sensitivity
+          // BULLETPROOF camera system with absolute constraints
+          const sensitivity = 0.002;
           
           const mouseX = event.movementX * sensitivity;
           const mouseY = event.movementY * sensitivity;
           
-          // HORIZONTAL ROTATION (left/right) - rotate around world up axis with limits
-          if (Math.abs(mouseX) > 0.001) {
-            // Calculate target horizontal angle
-            const targetAngle = horizontalAngle.current - mouseX;
-            
-            // Set horizontal limits - allow ±120 degrees (about 2/3 of a full turn each way)
-            const maxHorizontalAngle = Math.PI * 0.67; // ~120 degrees
-            
-            // Clamp horizontal rotation with smooth limiting
-            if (targetAngle > maxHorizontalAngle) {
-              horizontalAngle.current = maxHorizontalAngle;
-            } else if (targetAngle < -maxHorizontalAngle) {
-              horizontalAngle.current = -maxHorizontalAngle;
-            } else {
-              horizontalAngle.current = targetAngle;
-            }
-            
-            // Calculate the actual rotation to apply (difference from previous angle)
-            const previousAngle = horizontalAngle.current + mouseX;
-            const actualRotation = horizontalAngle.current - previousAngle;
-            
-            if (Math.abs(actualRotation) > 0.001) {
-              const rotationMatrix = new THREE.Matrix4();
-              rotationMatrix.makeRotationAxis(worldUp.current, actualRotation);
-              
-              // Rotate forward and right vectors around world up
-              cameraForward.current.applyMatrix4(rotationMatrix);
-              cameraRight.current.crossVectors(cameraForward.current, worldUp.current);
-              cameraRight.current.normalize();
-            }
+          // UPDATE YAW (horizontal rotation) - allow unlimited rotation
+          yaw.current -= mouseX;
+          
+          // Keep yaw normalized to prevent numerical issues
+          while (yaw.current > Math.PI) yaw.current -= 2 * Math.PI;
+          while (yaw.current < -Math.PI) yaw.current += 2 * Math.PI;
+          
+          // UPDATE PITCH (vertical rotation) - ABSOLUTE LIMITS prevent flipping
+          pitch.current -= mouseY;
+          
+          // CRITICAL: Clamp pitch to absolute safe values - NO EXCEPTIONS!
+          pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
+          
+          // APPLY ROTATIONS using safe Euler angles
+          // The clamped pitch makes upside-down flipping impossible
+          const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
+          camera.quaternion.setFromEuler(euler);
+          
+          // VERIFY: Ensure camera up vector is always pointing up
+          // This is a safety check - should never be needed with proper clamping
+          const cameraUp = new THREE.Vector3(0, 1, 0);
+          cameraUp.applyQuaternion(camera.quaternion);
+          
+          if (cameraUp.y < 0.1) {
+            // Emergency correction: reset to safe angles
+            console.warn('Emergency camera correction - angles were:', pitch.current, yaw.current);
+            pitch.current = 0;
+            yaw.current = 0;
+            camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
           }
-          
-          // VERTICAL ROTATION (up/down) - rotate around right axis with limits
-          if (Math.abs(mouseY) > 0.001) {
-            const rotationMatrix = new THREE.Matrix4();
-            rotationMatrix.makeRotationAxis(cameraRight.current, -mouseY);
-            
-            // Calculate new forward direction
-            const newForward = cameraForward.current.clone();
-            newForward.applyMatrix4(rotationMatrix);
-            
-            // Check if this rotation would flip us upside-down
-            // Limit vertical angle to prevent looking too far up/down
-            const maxVerticalAngle = 0.8; // ~45 degrees up/down from horizontal
-            
-            if (Math.abs(newForward.y) < maxVerticalAngle) {
-              cameraForward.current.copy(newForward);
-              cameraForward.current.normalize();
-            }
-          }
-          
-          // CONSTRUCT CAMERA MATRIX from our stable vectors
-          // This ensures the camera never flips and stays grounded
-          const lookAtMatrix = new THREE.Matrix4();
-          const cameraPosition = camera.position.clone();
-          const targetPosition = cameraPosition.clone().add(cameraForward.current);
-          
-          lookAtMatrix.lookAt(cameraPosition, targetPosition, worldUp.current);
-          camera.matrix.copy(lookAtMatrix);
-          camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
           
         } catch (error) {
           console.warn('Mouse look error:', error);
-          // Reset to safe forward direction
-          cameraForward.current.set(0, 0, -1);
-          cameraRight.current.set(1, 0, 0);
+          // Reset to safe state
+          pitch.current = 0;
+          yaw.current = 0;
+          camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
           if (document.exitPointerLock) {
             document.exitPointerLock();
           }
