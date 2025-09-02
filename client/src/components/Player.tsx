@@ -28,9 +28,13 @@ export default function Player() {
   const direction = useRef(new THREE.Vector3());
   const lastFootstepTime = useRef(0);
   
-  // Full freedom camera system with complete 360° horizontal and 180° vertical rotation
-  const yaw = useRef(0);   // Horizontal rotation (left/right) - UNLIMITED 360° rotation
-  const pitch = useRef(0); // Vertical rotation (up/down) - FULL 180° range (straight up to straight down)
+  // Smooth camera system with easing and reduced velocity
+  // Target angles (updated by mouse movement)
+  const targetYaw = useRef(0);   // Target horizontal rotation
+  const targetPitch = useRef(0); // Target vertical rotation
+  // Current angles (smoothly interpolated towards targets)
+  const currentYaw = useRef(0);   // Current horizontal rotation
+  const currentPitch = useRef(0); // Current vertical rotation
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
   // FULL ROTATION LIMITS - Complete freedom of movement
@@ -47,8 +51,8 @@ export default function Player() {
     
     // Initialize camera angles from current orientation
     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-    yaw.current = euler.y;
-    pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, euler.x)); // Clamp initial pitch
+    targetYaw.current = currentYaw.current = euler.y;
+    targetPitch.current = currentPitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, euler.x)); // Clamp initial pitch
     
     // Pointer lock for mouse look - activated by L key to avoid click conflicts
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -61,8 +65,8 @@ export default function Player() {
       // EMERGENCY CAMERA RESET - Press R to reset camera to safe position
       if ((event.key === 'r' || event.key === 'R') && isPointerLocked) {
         console.log('Manual camera reset triggered - resetting to safe position');
-        pitch.current = 0;
-        yaw.current = 0;
+        targetPitch.current = currentPitch.current = 0;
+        targetYaw.current = currentYaw.current = 0;
         camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
         console.log('Camera reset complete: yaw=0°, pitch=0°');
       }
@@ -75,62 +79,31 @@ export default function Player() {
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement === document.body) {
         try {
-          // REFINED camera system with inversion debugging
-          const sensitivity = 0.002;
+          // SMOOTH camera system - reduced velocity (2x slower) with easing
+          const sensitivity = 0.001; // REDUCED: Half the previous sensitivity for 2x slower movement
           
-          // Cap mouse deltas to prevent extreme jumps that cause inversion
-          const maxDelta = 0.05; // Limit to about 3 degrees per frame
+          // Cap mouse deltas to prevent extreme jumps
+          const maxDelta = 0.025; // Also reduced for smoother movement
           const rawMouseX = event.movementX * sensitivity;
           const rawMouseY = event.movementY * sensitivity;
           
           const mouseX = Math.max(-maxDelta, Math.min(maxDelta, rawMouseX));
           const mouseY = Math.max(-maxDelta, Math.min(maxDelta, rawMouseY));
           
-          // Store previous values for debugging
-          const prevYaw = yaw.current;
-          const prevPitch = pitch.current;
+          // UPDATE TARGET ANGLES (what we want to reach)
+          targetYaw.current -= mouseX;
+          targetPitch.current -= mouseY;
           
-          // UPDATE YAW (horizontal rotation) - accumulate without normalization
-          yaw.current -= mouseX;
+          // Clamp target pitch to prevent over-rotation
+          targetPitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, targetPitch.current));
           
-          // UPDATE PITCH (vertical rotation) - 180° range (straight up to straight down)
-          pitch.current -= mouseY;
-          
-          // Clamp pitch to prevent over-rotation beyond straight up/down
-          pitch.current = Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch.current));
-          
-          // FIRST-PERSON CAMERA ROTATION - proper quaternion order for smooth 360° rotation
-          // Create quaternions for each axis of rotation
-          const yawQuaternion = new THREE.Quaternion();
-          const pitchQuaternion = new THREE.Quaternion();
-          
-          // Yaw around world Y-axis (horizontal mouse movement)
-          yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
-          
-          // Pitch around local X-axis (vertical mouse movement)  
-          pitchQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch.current);
-          
-          // Combine: Pitch first (local), then Yaw (world) for proper first-person behavior
-          camera.quaternion.multiplyQuaternions(yawQuaternion, pitchQuaternion);
-          
-          // SIMPLE DEBUGGING - Log every 120 frames to check for issues
-          debugCount.current++;
-          if (debugCount.current % 120 === 0) {
-            console.log('Quaternion camera:', {
-              angles: { 
-                yaw: (yaw.current * 180 / Math.PI).toFixed(1) + '°', 
-                pitch: (pitch.current * 180 / Math.PI).toFixed(1) + '°'
-              },
-              mouse: { x: mouseX.toFixed(4), y: mouseY.toFixed(4) }
-            });
-          }
-          
+          // NOTE: Actual camera rotation now happens in useFrame for smooth interpolation
           
         } catch (error) {
           console.error('Mouse look error:', error);
           // Complete reset on any error
-          pitch.current = 0;
-          yaw.current = 0;
+          targetPitch.current = currentPitch.current = 0;
+          targetYaw.current = currentYaw.current = 0;
           camera.quaternion.setFromEuler(new THREE.Euler(0, 0, 0, 'YXZ'));
           if (document.exitPointerLock) {
             document.exitPointerLock();
@@ -165,6 +138,39 @@ export default function Player() {
 
   useFrame((state, delta) => {
     if (!playerRef.current) return;
+
+    // SMOOTH CAMERA INTERPOLATION - Easing between current and target rotation
+    if (isPointerLocked) {
+      const lerpSpeed = 8; // Adjust this for faster/slower easing (higher = faster catch up)
+      
+      // Smoothly interpolate current angles towards target angles
+      currentYaw.current = THREE.MathUtils.lerp(currentYaw.current, targetYaw.current, delta * lerpSpeed);
+      currentPitch.current = THREE.MathUtils.lerp(currentPitch.current, targetPitch.current, delta * lerpSpeed);
+      
+      // Apply the smoothed rotation to camera
+      const yawQuaternion = new THREE.Quaternion();
+      const pitchQuaternion = new THREE.Quaternion();
+      
+      yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), currentYaw.current);
+      pitchQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), currentPitch.current);
+      
+      camera.quaternion.multiplyQuaternions(yawQuaternion, pitchQuaternion);
+      
+      // Debug log every few seconds
+      debugCount.current++;
+      if (debugCount.current % 300 === 0) {
+        console.log('Smooth camera:', {
+          target: { 
+            yaw: (targetYaw.current * 180 / Math.PI).toFixed(1) + '°', 
+            pitch: (targetPitch.current * 180 / Math.PI).toFixed(1) + '°'
+          },
+          current: { 
+            yaw: (currentYaw.current * 180 / Math.PI).toFixed(1) + '°', 
+            pitch: (currentPitch.current * 180 / Math.PI).toFixed(1) + '°'
+          }
+        });
+      }
+    }
 
     const keys = getKeys();
     const moveSpeed = 8;
