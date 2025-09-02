@@ -26,10 +26,6 @@ export default function AudioVisualizer({ visualizationFilter }: AudioVisualizer
   const particleCount = 1000; // Much more particles for dramatic effect
   const currentFilter = visualizationFilter || storeFilter;
   
-  // Log when filter changes
-  useEffect(() => {
-    console.log('AudioVisualizer filter changed to:', currentFilter);
-  }, [currentFilter]);
   
   
 
@@ -98,7 +94,12 @@ export default function AudioVisualizer({ visualizationFilter }: AudioVisualizer
     // Update transition animation for smooth fade-in
     updateTransitionAnimation(delta);
     
-    if (!audioAnalyzer || !currentSong || isMuted) return;
+    if (!audioAnalyzer || !currentSong) {
+      // Log why we're not running animations
+      if (!audioAnalyzer) console.log('🚫 No audioAnalyzer');
+      if (!currentSong) console.log('🚫 No currentSong');
+      return;
+    }
 
     const frequencyData = audioAnalyzer.getFrequencyData();
     if (!frequencyData) return;
@@ -111,14 +112,11 @@ export default function AudioVisualizer({ visualizationFilter }: AudioVisualizer
       if (!barMesh) continue;
       
       const audioValue = frequencyData[i % frequencyData.length] || 0;
-      const normalizedAudio = audioValue / 255;
+      const normalizedAudio = isMuted ? 0.5 : (audioValue / 255); // Use baseline when muted
       
       // Apply different animations based on currentFilter
       // Get the current filter value directly from the store to avoid stale closures
       const activeFilter = visualizationFilter || useMusicExplorer.getState().visualizationFilter;
-      if (i === 0) {
-        console.log('Applying filter:', activeFilter, 'to first bar');
-      }
       switch (activeFilter) {
         case 'wave':
           // Wave Motion - bars move in undulating wave pattern
